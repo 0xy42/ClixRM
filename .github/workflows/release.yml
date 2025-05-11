@@ -1,0 +1,64 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' 
+
+jobs:
+  build-and-release:
+    name: Build and Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x 
+
+      - name: Extract Version from Tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Restore Dependencies
+        run: dotnet restore ./ClixRM.csproj
+
+      - name: Publish Framework-Dependent Windows Build
+        run: dotnet publish ./ClixRM.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=${{ env.VERSION }} -p:InformationalVersion=${{ env.VERSION }} --output ./publish_framework_dependent
+
+      - name: Create Framework-Dependent Build Artifact
+        run: |
+          mkdir -p ./artifacts_framework_dependent
+          Compress-Archive -Path ./publish_framework_dependent/* -DestinationPath ./artifacts_framework_dependent/ClixRM_Windows_${{ env.VERSION }}.zip
+
+      - name: Publish Bundled Windows Build (Single File)
+        run: dotnet publish ./ClixRM.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=true -p:Version=${{ env.VERSION }} -p:InformationalVersion=${{ env.VERSION }} --output ./publish_bundled
+
+      - name: Create Bundled Build Artifact
+        run: |
+          mkdir -p ./artifacts_bundled
+          Compress-Archive -Path ./publish_bundled/* -DestinationPath ./artifacts_bundled/ClixRM_Windows_Bundled_${{ env.VERSION }}.zip
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            ./artifacts_framework_dependent/ClixRM_Windows_${{ env.VERSION }}.zip
+            ./artifacts_bundled/ClixRM_Windows_Bundled_${{ env.VERSION }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }} 
+          body: |
+            Automated release for ${{ github.ref_name }}.
+
+            **Artifacts:**
+            - `ClixRM_Windows_${{ env.VERSION }}.zip`: Framework-dependent Windows build (requires .NET 8.0 x64 runtime).
+            - `ClixRM_Windows_Bundled_${{ env.VERSION }}.zip`: Self-contained, single-file executable for Windows (no .NET runtime needed).
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

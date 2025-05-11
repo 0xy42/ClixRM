@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Clix": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
