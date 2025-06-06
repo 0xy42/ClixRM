@@ -29,6 +29,7 @@ internal static class Startup
 
         // security
         services.AddTransient<PrivilegeCheckCommand>();
+        services.AddTransient<ListSecurityRolesCommand>();
         services.AddTransient<SecurityCommand>();
 
         // Flow
@@ -42,7 +43,7 @@ internal static class Startup
         // services
         services.AddSingleton<IOutputManager, OutputManager>();
         services.AddSingleton<IDataverseConnector, DataverseConnector>();
-        services.AddSingleton<IPrivilegeChecker, PrivilegeChecker>();
+        services.AddSingleton<ISecurityRoleAnalyzer, SecurityRoleAnalyzer>();
         services.AddSingleton<ISecureStorage, SecureStorage>();
         services.AddTransient<ISolutionDownloader, SolutionDownloader>();
         services.AddTransient<ISolutionPathResolver, SolutionPathResolver>();

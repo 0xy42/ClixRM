@@ -4,10 +4,11 @@ namespace ClixRM.Commands.Security
 {
     public class SecurityCommand : Command
     {
-        public SecurityCommand(PrivilegeCheckCommand privCheckCommand)
+        public SecurityCommand(PrivilegeCheckCommand privCheckCommand, ListSecurityRolesCommand secCheckCommand)
             : base("sec", "Commands for interaction with security related Dynamics components.")
         {
             AddCommand(privCheckCommand);
+            AddCommand(secCheckCommand);
         }
     }
 }

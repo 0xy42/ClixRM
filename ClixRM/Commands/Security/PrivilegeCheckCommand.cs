@@ -1,4 +1,5 @@
-﻿using ClixRM.Services.Security;
+﻿using ClixRM.Services.Output;
+using ClixRM.Services.Security;
 using Microsoft.Extensions.Configuration;
 using System.CommandLine;
 using System.CommandLine.Parsing;
@@ -7,12 +8,14 @@ namespace ClixRM.Commands.Security;
 
 public class PrivilegeCheckCommand : CrmConnectedCommand
 {
-    private readonly IPrivilegeChecker _privilegeChecker;
+    private readonly ISecurityRoleAnalyzer _privilegeChecker;
+    private readonly IOutputManager _outputManager;
 
-    public PrivilegeCheckCommand(IPrivilegeChecker privilegeChecker, IConfiguration configuration)
-        : base("priv-check", "Check how a specific privilege is granted to a user (directly or via teams).")
+    public PrivilegeCheckCommand(ISecurityRoleAnalyzer privilegeChecker, IConfiguration configuration, IOutputManager outputManager)
+        : base("privilege-check", "Check how a specific privilege is granted to a user (directly or via teams).")
     {
         _privilegeChecker = privilegeChecker;
+        _outputManager = outputManager;
 
         var userIdOption = CreateUserIdOption();
         var privilegeOption = CreatePrivilegeOption();
@@ -66,34 +69,30 @@ public class PrivilegeCheckCommand : CrmConnectedCommand
     {
         var userId = Guid.Parse(userIdString);
 
-        Console.WriteLine($"Checking how privilege '{privilegeName}' is granted to user '{userId}'...");
+        _outputManager.PrintInfo($"Checking how privilege '{privilegeName}' is granted to user '{userId}'...");
 
         try
         {
             var results = await _privilegeChecker.CheckPrivilegeAsync(userId, privilegeName);
 
-            if (!results.Any())
+            if (results.Count == 0)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Privilege '{privilegeName}' is either not found in the system or not granted to user '{userId}' directly or via teams.");
-                Console.ResetColor();
+                _outputManager.PrintWarning($"Privilege '{privilegeName}' is either not found in the system or not granted to user '{userId}' directly or via teams.");
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Found {results.Count} grant path(s) for privilege '{privilegeName}':");
-                Console.ResetColor();
+                _outputManager.PrintSuccess($"Found {results.Count} grant path(s) for privilege '{privilegeName}':");
 
                 var groupedResults = results.GroupBy(r => r.GrantType).OrderBy(g => g.Key);
 
                 foreach (var group in groupedResults)
                 {
-                    Console.WriteLine($"\n--- Granted via: {group.Key} ---");
+                    _outputManager.PrintInfo($"\n--- Granted via: {group.Key} ---");
                     var orderedGroup = group.OrderBy(r => r.RoleName).ThenBy(r => r.TeamName);
 
                     foreach (var result in orderedGroup)
                     {
-                        Console.WriteLine(
+                        _outputManager.PrintInfo(
                             result.GrantType == "Direct"
                                 ? $"- Role: \"{result.RoleName}\" ({result.RoleId}) | Scope: {result.PrivilegeScope}"
                                 : $"- Role: \"{result.RoleName}\" ({result.RoleId}) | Team: \"{result.TeamName}\" ({result.TeamId}) | Scope: {result.PrivilegeScope}"
@@ -104,9 +103,7 @@ public class PrivilegeCheckCommand : CrmConnectedCommand
         }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"An error occurred during privilege check: {ex.Message}");
-            Console.ResetColor();
+            _outputManager.PrintError($"An error occurred during privilege check: {ex.Message}");
         }
     }
 }

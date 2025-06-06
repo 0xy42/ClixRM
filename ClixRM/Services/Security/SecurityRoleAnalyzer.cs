@@ -1,4 +1,5 @@
-﻿using ClixRM.Services.Authentication;
+﻿using System.Data;
+using ClixRM.Services.Authentication;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 
@@ -14,7 +15,15 @@ public record PrivilegeCheckResult(
     Guid? TeamId
 );
 
-public class PrivilegeChecker(IDataverseConnector dataverseConnector) : IPrivilegeChecker
+public record SecurityRoleCheckResult(
+    string GrantType,
+    string RoleName, 
+    Guid RoleId,
+    string? TeamName,
+    Guid? TeamId
+);
+
+public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISecurityRoleAnalyzer
 {
     /// <summary>
     ///     Checks how a specific privilege is granted to a user, either directly or via teams.
@@ -40,6 +49,56 @@ public class PrivilegeChecker(IDataverseConnector dataverseConnector) : IPrivile
         results.AddRange(teamResults);
 
         return results;
+    }
+
+    public async Task<List<SecurityRoleCheckResult>> CheckSecurityRolesAsync(Guid userId)
+    {
+        var serviceClient = await dataverseConnector.GetServiceClientAsync();
+        var results = new List<SecurityRoleCheckResult>();
+        
+        var directRoles = GetDirectSecurityRoles(serviceClient, userId);
+
+        foreach ( var role in directRoles.Entities )
+        {
+            var roleId = role.GetAttributeValue<Guid>("roleid");
+            var roleName = role.GetAttributeValue<AliasedValue>("role.name")?.Value?.ToString() ?? "Unknown Role";
+
+            results.Add(
+                new SecurityRoleCheckResult(
+                    GrantType: "Direct",
+                    RoleName: roleName,
+                    RoleId: roleId,
+                    TeamName: null,
+                    TeamId: null
+                )
+            );
+        } 
+
+        var teams = GetUserTeams(serviceClient, userId);
+        foreach (var team in teams.Entities)
+        {
+            var teamName = team.GetAttributeValue<AliasedValue>("team.name")?.Value?.ToString() ?? "Unknown Team";
+            var teamId = team.GetAttributeValue<Guid>("teamid");
+            var teamRoles = GetTeamSecurityRoles(serviceClient, teamId);
+
+            foreach (var teamRole in teamRoles.Entities)
+            {
+                var roleName = teamRole.GetAttributeValue<AliasedValue>("role.name")?.Value?.ToString() ?? "Unknown Role";
+                var roleId = teamRole.GetAttributeValue<Guid>("roleid");
+
+                results.Add(
+                    new SecurityRoleCheckResult(
+                        GrantType: "Team",
+                        RoleName: roleName,
+                        RoleId: roleId,
+                        TeamName: teamName,
+                        TeamId: teamId
+                    )
+                );
+            }
+        }
+
+        return results; 
     }
 
     private Guid GetPrivilegeId(IOrganizationService serviceClient, string privilegeName)
