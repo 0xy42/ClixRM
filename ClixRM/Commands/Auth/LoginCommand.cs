@@ -29,9 +29,9 @@ public class LoginCommand : Command
         this.SetHandler(HandleLogin, clientIdOption, clientSecretOption, tenantIdOption, urlOption, connectionNameOption);
     }
 
-    private static Option<string> CreateClientIdOption()
+    private static Option<Guid> CreateClientIdOption()
     {
-        return new Option<string>(["--client-id", "-c"], "The application client ID for authentication")
+        return new Option<Guid>(["--client-id", "-c"], "The application client ID for authentication")
         {
             IsRequired = true
         };
@@ -45,9 +45,9 @@ public class LoginCommand : Command
         };
     }
 
-    private static Option<string> CreateTenantIdOption()
+    private static Option<Guid> CreateTenantIdOption()
     {
-        return new Option<string>(["--tenant-id", "-t"], "The tenant ID of the environment")
+        return new Option<Guid>(["--tenant-id", "-t"], "The tenant ID of the environment")
         {
             IsRequired = true
         };
@@ -69,7 +69,7 @@ public class LoginCommand : Command
         };
     }
 
-    private async Task HandleLogin(string clientId, string clientSecret, string tenantId, string url, string connectionName)
+    private async Task HandleLogin(Guid clientId, string clientSecret, Guid tenantId, string url, string connectionName)
     {
         Console.WriteLine($"Authenticating to tenant '{tenantId}' with client ID '{clientId}'...");
 

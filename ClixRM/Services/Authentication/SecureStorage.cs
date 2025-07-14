@@ -64,7 +64,7 @@ public class SecureStorage : ISecureStorage
         }
     }
 
-    public void SaveConnection(AppRegistrationConnectionDetails connection)
+    public void SaveConnection(AppRegistrationConnectionDetailsSecure connection)
     {
         var connections = LoadAllConnections();
         connections[connection.EnvironmentName.ToLower()] = connection;
@@ -74,7 +74,7 @@ public class SecureStorage : ISecureStorage
         _logger.LogInformation("Connection for environment '{EnvironmentName}' saved.", connection.EnvironmentName);
     }
 
-    public AppRegistrationConnectionDetails GetConnection(string environmentName)
+    public AppRegistrationConnectionDetailsSecure GetConnection(string environmentName)
     {
         var connections = LoadAllConnections();
         if (connections.TryGetValue(environmentName.ToLower(), out var connection))
@@ -83,6 +83,12 @@ public class SecureStorage : ISecureStorage
         }
         _logger.LogWarning("No connection found for environment '{EnvironmentName}'.", environmentName);
         throw new KeyNotFoundException($"No connection found for environment '{environmentName}'.");
+    }
+
+    public IEnumerable<AppRegistrationConnectionDetailsUnsecure> ListConnectionsUnsecure()
+    {
+        var connections = LoadAllConnections();
+        return connections.Values.Select(c => c.ToUnsecure());
     }
 
     public void RemoveConnection(string environmentName)
@@ -127,38 +133,38 @@ public class SecureStorage : ISecureStorage
         _logger.LogInformation("All connections and active identifier removed.");
     }
 
-    public IDictionary<string, AppRegistrationConnectionDetails> LoadAllConnections()
+    public IDictionary<string, AppRegistrationConnectionDetailsSecure> LoadAllConnections()
     {
         if (!File.Exists(_storageFilePath))
         {
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, AppRegistrationConnectionDetailsSecure>(StringComparer.OrdinalIgnoreCase);
         }
 
         try
         {
             var encryptedData = File.ReadAllBytes(_storageFilePath);
             var json = DecryptData(encryptedData);
-            var deserialized = JsonSerializer.Deserialize<Dictionary<string, AppRegistrationConnectionDetails>>(json);
+            var deserialized = JsonSerializer.Deserialize<Dictionary<string, AppRegistrationConnectionDetailsSecure>>(json);
 
             return deserialized == null
-                ? new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, AppRegistrationConnectionDetails>(deserialized, StringComparer.OrdinalIgnoreCase);
+                ? new Dictionary<string, AppRegistrationConnectionDetailsSecure>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, AppRegistrationConnectionDetailsSecure>(deserialized, StringComparer.OrdinalIgnoreCase);
         }
         catch (CryptographicException ex)
         {
             _logger.LogError(ex, "Error decrypting connection file '{StorageFilePath}'. Data may be corrupted or inaccessible.", _storageFilePath);
             // It might be safer to delete the corrupted file to avoid repeated errors, or rename it.
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, AppRegistrationConnectionDetailsSecure>(StringComparer.OrdinalIgnoreCase);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Error deserializing decrypted connection data from '{StorageFilePath}'. File may be corrupted.", _storageFilePath);
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, AppRegistrationConnectionDetailsSecure>(StringComparer.OrdinalIgnoreCase);
         }
         catch (IOException ex)
         {
             _logger.LogError(ex, "Error reading connection file '{StorageFilePath}'.", _storageFilePath);
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, AppRegistrationConnectionDetailsSecure>(StringComparer.OrdinalIgnoreCase);
         }
     }
 

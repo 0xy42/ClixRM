@@ -4,10 +4,10 @@ namespace ClixRM.Services.Authentication
 {
     public interface IAuthService
     {
-        Task<AppRegistrationConnectionDetails> AuthenticateAsync(
-            string clientId,
+        Task<AppRegistrationConnectionDetailsSecure> AuthenticateAsync(
+            Guid clientId,
             string clientSecret,
-            string tenantId,
+            Guid tenantId,
             string url,
             string connectionName
         );

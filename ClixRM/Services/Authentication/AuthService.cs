@@ -13,8 +13,8 @@ public class AuthService : IAuthService
         _logger = logger;
     }
 
-    public async Task<AppRegistrationConnectionDetails> AuthenticateAsync(
-        string clientId, string clientSecret, string tenantId, string url, string connectionName)
+    public async Task<AppRegistrationConnectionDetailsSecure> AuthenticateAsync(
+        Guid clientId, string clientSecret, Guid tenantId, string url, string connectionName)
     {
         _logger.LogInformation("Attempting to authenticate for Client ID: {ClientId}, Tenant ID: {TenantId}, URL: {Url}, Connection Name: {ConnectionName}",
             clientId, tenantId, url, connectionName);
@@ -32,7 +32,7 @@ public class AuthService : IAuthService
 
         try
         {
-            var app = ConfidentialClientApplicationBuilder.Create(clientId)
+            var app = ConfidentialClientApplicationBuilder.Create(clientId.ToString())
                 .WithClientSecret(clientSecret)
                 .WithAuthority(new Uri($"https://login.microsoftonline.com/{tenantId}"))
                 .Build();
@@ -46,7 +46,7 @@ public class AuthService : IAuthService
 
             _logger.LogInformation("Token acquired successfully. Expires on: {Expiry}", result.ExpiresOn.UtcDateTime);
 
-            return new AppRegistrationConnectionDetails(
+            return new AppRegistrationConnectionDetailsSecure(
                 connectionId: Guid.NewGuid(),
                 environmentName: connectionName.ToLower(),
                 clientId: clientId,

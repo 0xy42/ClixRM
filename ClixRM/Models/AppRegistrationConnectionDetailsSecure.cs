@@ -1,22 +1,22 @@
 ﻿namespace ClixRM.Models;
 
-public class AppRegistrationConnectionDetails
+public class AppRegistrationConnectionDetailsSecure
 {
     public Guid ConnectionId { get; set; }
     public string EnvironmentName { get; set; }
-    public string ClientId { get; set; }
+    public Guid ClientId { get; set; }
     public string ClientSecret { get; set; }
-    public string TenantId { get; set; }
+    public Guid TenantId { get; set; }
     public string AccessToken { get; set; }
     public DateTime Expiry { get; set; }
     public string Url { get; set; }
 
-    public AppRegistrationConnectionDetails(
+    public AppRegistrationConnectionDetailsSecure(
         Guid connectionId,
         string environmentName,
-        string clientId,
+        Guid clientId,
         string clientSecret,
-        string tenantId,
+        Guid tenantId,
         string accessToken,
         DateTime expiry,
         string url)
@@ -29,5 +29,10 @@ public class AppRegistrationConnectionDetails
         AccessToken = accessToken;
         Expiry = expiry;
         Url = url;
+    }
+
+    public AppRegistrationConnectionDetailsUnsecure ToUnsecure()
+    {
+        return new AppRegistrationConnectionDetailsUnsecure(ConnectionId, EnvironmentName, ClientId, Url, Expiry);
     }
 }
