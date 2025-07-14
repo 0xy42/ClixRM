@@ -11,5 +11,12 @@ namespace ClixRM.Services.Authentication
             string url,
             string connectionName
         );
+
+        Task<AppRegistrationConnectionDetailsSecure> AuthenticateAsync(
+            Guid clientId,
+            string clientSecret,
+            string url,
+            string connectionName
+        );
     }
 }

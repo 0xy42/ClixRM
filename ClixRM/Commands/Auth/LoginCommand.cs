@@ -1,5 +1,7 @@
 ﻿using ClixRM.Services.Authentication;
+using ClixRM.Services.Output;
 using System.CommandLine;
+using System.Text;
 
 namespace ClixRM.Commands.Auth;
 
@@ -7,26 +9,26 @@ public class LoginCommand : Command
 {
     private readonly ISecureStorage _secureStorage;
     private readonly IAuthService _authService;
+    private readonly IOutputManager _outputManager;
 
-    public LoginCommand(ISecureStorage secureStorage, IAuthService authService)
+    public LoginCommand(ISecureStorage secureStorage, IAuthService authService, IOutputManager outputManager)
         : base("login", "Authenticate and store connection for an environment")
     {
         _secureStorage = secureStorage;
         _authService = authService;
+        _outputManager = outputManager;
 
         var clientIdOption = CreateClientIdOption();
-        var clientSecretOption = CreateClientSecretOption();
-        var tenantIdOption = CreateTenantIdOption();
         var urlOption = CreateUrlOption();
         var connectionNameOption = CreateConnectionNameOption();
+        var setActiveOption = CreateSetActiveOption();
 
         AddOption(clientIdOption);
-        AddOption(clientSecretOption);
-        AddOption(tenantIdOption);
         AddOption(urlOption);
         AddOption(connectionNameOption);
+        AddOption(setActiveOption);
 
-        this.SetHandler(HandleLogin, clientIdOption, clientSecretOption, tenantIdOption, urlOption, connectionNameOption);
+        this.SetHandler(HandleLogin, clientIdOption, urlOption, connectionNameOption, setActiveOption);
     }
 
     private static Option<Guid> CreateClientIdOption()
@@ -37,25 +39,9 @@ public class LoginCommand : Command
         };
     }
 
-    private static Option<string> CreateClientSecretOption()
-    {
-        return new Option<string>(["--client-secret", "-s"], "The client secret for authentication")
-        {
-            IsRequired = true
-        };
-    }
-
-    private static Option<Guid> CreateTenantIdOption()
-    {
-        return new Option<Guid>(["--tenant-id", "-t"], "The tenant ID of the environment")
-        {
-            IsRequired = true
-        };
-    }
-
     private static Option<string> CreateUrlOption()
     {
-        return new Option<string>(["--url", "-a"], "The tenant URL of the environment")
+        return new Option<string>(["--url", "-u"], "The tenant URL of the environment")
         {
             IsRequired = true
         };
@@ -69,21 +55,69 @@ public class LoginCommand : Command
         };
     }
 
-    private async Task HandleLogin(Guid clientId, string clientSecret, Guid tenantId, string url, string connectionName)
+    private static Option<bool> CreateSetActiveOption()
     {
-        Console.WriteLine($"Authenticating to tenant '{tenantId}' with client ID '{clientId}'...");
+        return new Option<bool>(["--set-active", "-a"], "Set the new connection login as active connection.");
+    }
+
+    private async Task HandleLogin(Guid clientId, string url, string connectionName, bool doSetActive)
+    {
+
+        var clientSecret = PromptForSecret("Enter Client Secret: ");
+        
+
+        _outputManager.PrintInfo($"Authenticating to environment '{url}' with client ID '{clientId}'...");
 
         try
         {
-            var connection = await _authService.AuthenticateAsync(clientId, clientSecret, tenantId, url, connectionName);
+            var connection = await _authService.AuthenticateAsync(clientId, clientSecret, url, connectionName);
 
             _secureStorage.SaveConnection(connection);
 
-            Console.WriteLine($"Successfully authenticated and stored connection as '{connectionName}'.");
+            bool wasSetActive = false;
+            if (_secureStorage.GetActiveConnectionIdentifier() == null || doSetActive)
+            {
+                _secureStorage.SetActiveEnvironment(connectionName);
+                wasSetActive = true;
+            }
+
+            var output = $"Successfully authenticated and stored connection as '{connectionName}'.";
+            if (wasSetActive)
+            {
+                output = output + $" New environment {connectionName} was set as active.";
+            }
+            _outputManager.PrintSuccess(output);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Authentication failed: {ex.Message}");
+            _outputManager.PrintError($"Authentication failed: {ex.Message}");
         }
+    }
+
+    private string PromptForSecret(string promptMessage)
+    {
+        _outputManager.PrintInfo(promptMessage);
+
+        var secretBuilder = new StringBuilder();
+        while (true)
+        {
+            var key = Console.ReadKey(true);
+            if (key.Key == ConsoleKey.Enter)
+            {
+                Console.WriteLine();
+                break;
+            }
+
+            if (key.Key == ConsoleKey.Backspace && secretBuilder.Length > 0)
+            {
+                secretBuilder.Length--;
+            }
+            else if (!char.IsControl(key.KeyChar))
+            {
+                secretBuilder.Append(key.KeyChar);
+            }
+        }
+
+        return secretBuilder.ToString();
     }
 }

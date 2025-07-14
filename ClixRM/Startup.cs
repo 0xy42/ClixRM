@@ -27,6 +27,7 @@ internal static class Startup
         services.AddTransient<LoginCommand>();
         services.AddTransient<AuthCommand>();
         services.AddTransient<ListCommand>();
+        services.AddTransient<ShowActiveCommand>();
 
         // security
         services.AddTransient<PrivilegeCheckCommand>();
