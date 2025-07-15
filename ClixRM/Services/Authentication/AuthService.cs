@@ -138,32 +138,40 @@ public class AuthService : IAuthService
     {
         var discoveryRequestUrl = new Uri(new Uri(dynamicsUrl), "api/data/v9.2/RetrieveCurrentOrganization(AccessType='Default')");
 
+        HttpResponseMessage response;
+
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, discoveryRequestUrl);
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                if (response.Headers.TryGetValues("WWW-Authenticate", out var headerValues))
-                {
-                    var wwwAuthHeader = headerValues.FirstOrDefault();
-                    if (!string.IsNullOrEmpty(wwwAuthHeader))
-                    {
-                        var parameters = new WwwAuthenticateParameters(wwwAuthHeader);
-                        return parameters.GetTenantId();
-                    }
-                }
-            }
-
-            _logger.LogWarning("Did not receive a 401 Unauthorized with a WWW-Authenticate header. Statuscode: {StatusCode}", response.StatusCode);
+            response = await _httpClient.SendAsync(request);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "A network error occurred while trying to discover the Tenant ID from {Url}", dynamicsUrl);
+            _logger.LogError(ex, "A network error occurred while trying to discover the Tenant ID.");
+            return null;
         }
 
-        return null;
+        if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogWarning("Expected a 401 unauthorized response to discover the tenant, but received {StatusCode}", response.StatusCode);
+            return null;
+        }
+
+        if (!response.Headers.TryGetValues("WWW-Authenticate", out var headerValues))
+        {
+            _logger.LogWarning("The 401 unauthorized response did not contain the required 'WWW-Authenticate' header.");
+            return null;
+        }
+
+        var wwwAuthHeader = headerValues.FirstOrDefault();
+
+        if (string.IsNullOrEmpty(wwwAuthHeader))
+        {
+            _logger.LogWarning("The 'WWW-Authenticate' header was present but had no value.");
+            return null;
+        }
+
+        var parameters = new WwwAuthenticateParameters(wwwAuthHeader);
+        return parameters.GetTenantId();
     }
 }

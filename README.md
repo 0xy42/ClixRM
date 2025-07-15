@@ -11,46 +11,75 @@ ClixRM is a command-line tool designed to streamline and simplify administrative
 ClixRM offers the following features:
 
 ### Authentication
-- **Login Command (`login`)**  
+- **Clear Command (`clear`)**
+  Clear and remove all existing connections stored on your machine.
+
+- **List Command (`list`)**
+  List all existing and stored connections.
+
+- **Login-App Command (`login-app`)**  
   Authenticate to a Dataverse environment using client credentials and store the connection securely for future use.  
   Options:
   - `--client-id` (`-c`): The application client ID for authentication (required).
   - `--client-secret` (`-s`): The client secret for authentication (required).
-  - `--tenant-id` (`-t`): The tenant ID of the environment (required).
-  - `--url` (`-a`): The tenant URL of the environment (required).
+  - `--url` (`-u`): The tenant URL of the environment (required).
   - `--connection-name` (`-n`): A user-friendly name for the connection (required).
+  - `--set-active` (`-a`): Set the newly created connection as active connection.
+
+- **Login-User Command (`login-user`)**
+  Authenticate to a Dataverse environment using an interactive user login and store the connection securely for future use. Currently, ClixRM is not a validated Application in Microsoft Partner Program, thus your Tenants admin consent is needed when using ClixRM for interactive user logins.  
+  Options: 
+  - `--url` (`-u`): The tenant URL of the environment (required).
+  - `--connection-name` (`-n`): A user-friendly name for the connection (required).
+  - `--set-active` (`-a`): Set the newly created connection as active connection.
+
+- **Show Active Command (`show-active`)**
+  Show the currently active used connection.
 
 - **Switch Environment Command (`switch`)**  
   Switch to a different environment.  
   Arguments:
-  - `<environment>`: The environment to switch to (required).
+  - `<environmentName>`: The environment to switch to (required).
 
 ### Security
-- **Privilege Check Command (`priv-check`)**  
+- **List security roles Command (`list-security-roles`)**
+  Check if a user has a specific security role assigned (directly or via teams).  
+  Options: 
+  - `--user-id` (`-u`): The GUID of the user to check security roles for. (required)
+
+- **Privilege Check Command (`privilege-check`)**  
   Check a user's privilege for a specific entity or action in the Dataverse environment.  
   Options:
-  - `--user-id`: The ID of the user to check privileges for (must be a valid GUID, required).
+  - `--user-id` (`-u`): The ID of the user to check privileges for (must be a valid GUID, required).
   - `--privilege`: The logical name of the privilege to check (e.g., `prvCreateAccount`, required).
 
 ### Flow Management
+Currently, all 'Flow' commands feature the following options since they are solution aware commands:
+- `--online-solution` (`-s`): The unique name of the solution to download from the online environment.
+- `--dir` (`-d`): The path to an unzipped, already downloaded solution.
+- `--force-download` (`-f`): Force downloading a new version of the solution instead of using the cache, e.g. in case of updates. 
+
 - **Field Dependency Analysis (`flow-field-dependency`)**  
   Analyze Power Automate flows to find dependencies on specific entity fields.  
   Options:
-  - `--entity`: Logical name of the entity (singular preferred, required).
-  - `--column`: Logical name of the column to analyze (required).
-  - `--action`: Filter to include only actions of a specific type (optional).
-  - `--actions-only`: If set, only actions will be included (optional).
-  - `--triggers-only`: If set, only triggers will be included (optional).
-  - `--online-solution`: Unique name of the solution to download from the online environment (optional).
-  - `--dir`: Path to the unzipped solution directory containing cloud flows (optional).
-  - `--force-download`: Force download of the solution, ignoring any cached version (optional).
+  - `--entity` (`-e`): Logical name of the entity (singular preferred, required).
+  - `--column` (`-c`): Logical name of the column to analyze (required).
+  - `--action` (`-a`): Filter to include only actions of a specific type (optional).
+  - `--actions-only` (`-ao`): If set, only actions will be included (optional).
+  - `--triggers-only` (`-to`): If set, only triggers will be included (optional).
 
-- **Entity Event Trigger Analysis (`flow-entity-event`)**  
+- **Triggered By Entity Message Command (`triggered-by-message`)**  
   Analyze Power Automate flows to find triggers based on specific entity events.  
   Options:
   - `--solution-directory`: Path to the unzipped solution directory (required).
-  - `--entity-name`: Logical name of the entity (singular preferred, required).
-  - `--event-name`: The name of the event (e.g., "Update", "Create", "Delete", required).
+  - `--entity` (`-e`): Logical name of the entity to check (required).
+  - `--message` (`-m`): The name of the event message (e.g., "Update", "Create", "Delete", required).
+
+- **Triggers Message Command (`triggers-message`)**
+  Check all flows in a solution for triggering specific entity messages (e.g. create account).  
+  Options: 
+  - `--entity` (`-e`): The logical singular name of the entity targeted by the action.
+  - `--message` (`-m`): THe type of operation to search for actions performing. Use '-h' for a list of allowed operations.
 
 ---
 

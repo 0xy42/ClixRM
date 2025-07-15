@@ -51,7 +51,7 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
 
     private static Option<string> CreateMessageOption()
     {
-        var messageOption = new Option<string>(["--message", "-m"], "The name of the event (create, update, delete)")
+        var messageOption = new Option<string>(["--message", "-m"], "The name of the event message (create, update, delete)")
         {
             IsRequired = true,
             ArgumentHelpName = "event"

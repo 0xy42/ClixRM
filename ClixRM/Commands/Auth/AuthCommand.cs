@@ -4,7 +4,13 @@ namespace ClixRM.Commands.Auth;
 
 public class AuthCommand : Command
 {
-    public AuthCommand(LoginAppCommand loginCommand, LoginUserCommand loginUserCommand, SwitchEnvironmentCommand switchEnvironmentCommand, ListCommand listCommand, ShowActiveCommand showActiveCommand)
+    public AuthCommand(
+        LoginAppCommand loginCommand, 
+        LoginUserCommand loginUserCommand, 
+        SwitchEnvironmentCommand switchEnvironmentCommand, 
+        ListCommand listCommand, 
+        ShowActiveCommand showActiveCommand,
+        ClearCommand clearCommand)
         : base("auth", "Authentication commands for managing connections to environments")
     {
         AddCommand(loginCommand);
@@ -12,5 +18,6 @@ public class AuthCommand : Command
         AddCommand(switchEnvironmentCommand);
         AddCommand(listCommand);
         AddCommand(showActiveCommand);
+        AddCommand(clearCommand);
     }
 }

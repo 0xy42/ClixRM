@@ -39,17 +39,14 @@ public class ListCommand : Command
             var activeConnectionIdentifier = _storage.GetActiveConnectionIdentifier();
             string? activeConnectionName = activeConnectionIdentifier?.EnvironmentName;
 
-            // Header for the output table
             _outputManager.PrintInfo(string.Format("{0,-10} {1,-25} {2,-25} {3}", "Status", "Name", "Type", "Identifier"));
             _outputManager.PrintInfo(new string('-', 70));
 
-            // Print the active connection first
             if (activeConnectionName != null)
             {
                 var activeConnection = connections.FirstOrDefault(c => c.EnvironmentName.Equals(activeConnectionName, StringComparison.OrdinalIgnoreCase));
                 if (activeConnection != null)
                 {
-                    // Print the active connection with a special marker
                     _outputManager.PrintSuccess(FormatConnectionLine(" (Active)", activeConnection));
                 }
                 else
@@ -58,7 +55,6 @@ public class ListCommand : Command
                 }
             }
 
-            // Print the rest of the connections
             foreach (var connection in connections.Where(c => !c.EnvironmentName.Equals(activeConnectionName, StringComparison.OrdinalIgnoreCase)))
             {
                 _outputManager.PrintInfo(FormatConnectionLine("", connection));
