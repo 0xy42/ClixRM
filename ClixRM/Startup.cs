@@ -28,6 +28,7 @@ internal static class Startup
         services.AddTransient<LoginUserCommand>();
         services.AddTransient<AuthCommand>();
         services.AddTransient<ListCommand>();
+        services.AddTransient<ClearCommand>();
         services.AddTransient<ShowActiveCommand>();
 
         // security
