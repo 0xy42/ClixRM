@@ -17,64 +17,7 @@ public class AuthService : IAuthService
         _logger = logger;
     }
 
-    [Obsolete("A new method exists, that does not require a Tenant ID to be passed.")]
-    public async Task<AppRegistrationConnectionDetailsSecure> AuthenticateAsync(
-        Guid clientId, string clientSecret, Guid tenantId, string url, string connectionName)
-    {
-        _logger.LogInformation("Attempting to authenticate for Client ID: {ClientId}, Tenant ID: {TenantId}, URL: {Url}, Connection Name: {ConnectionName}",
-            clientId, tenantId, url, connectionName);
-
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            _logger.LogError("Authentication failed: URL cannot be empty.");
-            throw new ArgumentNullException(nameof(url), "Environment URL cannot be empty.");
-        }
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-        {
-            _logger.LogError("Authentication failed: Invalid URL format for {Url}.", url);
-            throw new ArgumentException("Invalid URL format.", nameof(url));
-        }
-
-        try
-        {
-            var app = ConfidentialClientApplicationBuilder.Create(clientId.ToString())
-                .WithClientSecret(clientSecret)
-                .WithAuthority(new Uri($"https://login.microsoftonline.com/{tenantId}"))
-                .Build();
-
-            var validatedUrl = url.EndsWith("/") ? url : $"{url}/";
-            var scopes = new[] { $"{validatedUrl}.default" };
-
-            _logger.LogInformation("Acquiring token with scopes: {Scopes}", string.Join(", ", scopes));
-
-            var result = await app.AcquireTokenForClient(scopes).ExecuteAsync();
-
-            _logger.LogInformation("Token acquired successfully. Expires on: {Expiry}", result.ExpiresOn.UtcDateTime);
-
-            return new AppRegistrationConnectionDetailsSecure(
-                connectionId: Guid.NewGuid(),
-                environmentName: connectionName.ToLower(),
-                clientId: clientId,
-                clientSecret: clientSecret,
-                tenantId: tenantId,
-                accessToken: result.AccessToken,
-                expiry: result.ExpiresOn.UtcDateTime,
-                url: url
-            );
-        }
-        catch (MsalServiceException ex)
-        {
-            _logger.LogError(ex, "MSAL Service Exception during authentication for Client ID {ClientId}. ErrorCode: {ErrorCode}. Message: {Message}", clientId, ex.ErrorCode, ex.Message);
-            throw new InvalidOperationException($"Authentication failed: {ex.Message} (MSAL Error: {ex.ErrorCode})", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Generic exception during authentication for Client ID {ClientId}.", clientId);
-            throw new InvalidOperationException($"An unexpected error occurred during authentication: {ex.Message}", ex);
-        }
-    }
-
-    public async Task<AppRegistrationConnectionDetailsSecure> AuthenticateAppAsync(
+    public async Task<AppSecretConnectionDetails> AuthenticateAppAsync(
         Guid clientId, string clientSecret, string url, string connectionName)
     {
         _logger.LogInformation("Attempting to authenticate for Client ID: {ClientId}, URL: {Url}, Connection Name: {ConnectionName}",
@@ -119,15 +62,13 @@ public class AuthService : IAuthService
 
             _logger.LogInformation("Token acquired successfully. Expires on: {Expiry}", result.ExpiresOn.UtcDateTime);
 
-            return new AppRegistrationConnectionDetailsSecure(
+            return new AppSecretConnectionDetails(
                 connectionId: Guid.NewGuid(),
                 environmentName: connectionName.ToLower(),
-                clientId: clientId,
-                clientSecret: clientSecret,
+                url: url,
                 tenantId: tenantId.Value,
-                accessToken: result.AccessToken,
-                expiry: result.ExpiresOn.UtcDateTime,
-                url: url);
+                clientId: clientId,
+                clientSecret: clientSecret);
         }
         catch (MsalServiceException ex)
         {
@@ -154,10 +95,11 @@ public class AuthService : IAuthService
 
         try
         {
-            var app = PublicClientApplicationBuilder.Create(PublicClientId)
+            var builder = PublicClientApplicationBuilder.Create(PublicClientId)
                 .WithAuthority(AzureCloudInstance.AzurePublic, "organizations")
-                .WithRedirectUri("http://localhost")
-                .Build();
+                .WithRedirectUri("http://localhost");
+
+            var app = TokenCacheProvider.CreateClientApplication(builder);
 
             var validateUrl = url.EndsWith("/") ? url : $"{url}/";
             var scopes = new[] { $"{validateUrl}.default" };
@@ -168,6 +110,7 @@ public class AuthService : IAuthService
 
             var authenticatedUserAccount = result.Account;
             var userPrincipalName = authenticatedUserAccount.Username;
+            var homeAccountId = authenticatedUserAccount.HomeAccountId.Identifier;
             var tenantId = Guid.Parse(result.TenantId);
 
             return new UserConnectionDetails(
@@ -176,7 +119,8 @@ public class AuthService : IAuthService
                 url: url,
                 tenantId: tenantId,
                 clientId: publicClientIdGuid,
-                userPrincipalName: userPrincipalName);
+                userPrincipalName: userPrincipalName,
+                homeAccountId: homeAccountId);
         }
         catch (MsalClientException ex) when (ex.ErrorCode == "authentication_canceled")
         {

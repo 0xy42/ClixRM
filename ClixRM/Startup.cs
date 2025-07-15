@@ -25,6 +25,7 @@ internal static class Startup
         //auth
         services.AddTransient<SwitchEnvironmentCommand>();
         services.AddTransient<LoginAppCommand>();
+        services.AddTransient<LoginUserCommand>();
         services.AddTransient<AuthCommand>();
         services.AddTransient<ListCommand>();
         services.AddTransient<ShowActiveCommand>();

@@ -44,12 +44,21 @@ namespace ClixRM.Models
     public record UserConnectionDetails : ConnectionDetails
     {
         public string UserPrincipalName { get; }
+        public string HomeAccountId { get; }
         public override string ConnectionType => "User Account";
 
-        public UserConnectionDetails(Guid connectionId, string environmentName, string url, Guid tenantId, Guid clientId, string userPrincipalName) 
+        public UserConnectionDetails(Guid connectionId, string environmentName, string url, Guid tenantId, Guid clientId, string userPrincipalName, string homeAccountId) 
             : base(connectionId, environmentName, url, tenantId, clientId)
         {
             UserPrincipalName = userPrincipalName;
+            HomeAccountId = homeAccountId;
         }
     }
+
+    public record ConnectionDetailsUnsecure(
+        string EnvironmentName,
+        string Url,
+        string ConnectionType,
+        string Identifier
+    );
 }

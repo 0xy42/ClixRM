@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ClixRM.Models;
 using ClixRM.Services.Authentication;
 using ClixRM.Services.Output;
 
@@ -33,7 +34,13 @@ public class ShowActiveCommand : Command
                 return;
             }
 
-            var activeConnection = _storage.GetConnection(activeConnectionIdentifier.EnvironmentName).ToUnsecure();
+            var activeConnection = _storage.GetConnection(activeConnectionIdentifier.EnvironmentName);
+
+            var unsecureOutput = new ConnectionDetailsUnsecure(
+                activeConnection.EnvironmentName,
+                activeConnection.Url,
+                activeConnection.ConnectionType,
+                activeConnection.ClientId.ToString());
 
             _outputManager.PrintSuccess(activeConnection.ToString());
         }

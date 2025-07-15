@@ -28,31 +28,54 @@ public class ListCommand : Command
     {
         try
         {
-            var connections = _storage.ListConnectionsUnsecure();
+            var connections = _storage.ListConnectionsUnsecure().ToList();
 
-            AppRegistrationConnectionDetailsUnsecure? activeConnection = null;
-            var activeConnectionIdentifier = _storage.GetActiveConnectionIdentifier();
-            if (activeConnectionIdentifier != null)
+            if (!connections.Any())
             {
-                activeConnection = connections.FirstOrDefault(c => c.ConnectionId == activeConnectionIdentifier.ConnectionId);
-                if (activeConnection == null)
+                _outputManager.PrintInfo("No connections have been saved yet.");
+                return;
+            }
+
+            var activeConnectionIdentifier = _storage.GetActiveConnectionIdentifier();
+            string? activeConnectionName = activeConnectionIdentifier?.EnvironmentName;
+
+            // Header for the output table
+            _outputManager.PrintInfo(string.Format("{0,-10} {1,-25} {2,-25} {3}", "Status", "Name", "Type", "Identifier"));
+            _outputManager.PrintInfo(new string('-', 70));
+
+            // Print the active connection first
+            if (activeConnectionName != null)
+            {
+                var activeConnection = connections.FirstOrDefault(c => c.EnvironmentName.Equals(activeConnectionName, StringComparison.OrdinalIgnoreCase));
+                if (activeConnection != null)
                 {
-                    _outputManager.PrintWarning("Found an active connection identifiert, but unable to retrieve active connection. Consider clearing your authentications.");
+                    // Print the active connection with a special marker
+                    _outputManager.PrintSuccess(FormatConnectionLine(" (Active)", activeConnection));
                 }
-                else 
+                else
                 {
-                    _outputManager.PrintSuccess("(ACTIVE) " + activeConnection.ToString());
+                    _outputManager.PrintWarning("Found an active connection identifier, but unable to retrieve the connection. Consider clearing your authentications.");
                 }
             }
 
-            foreach (var connection in connections.Where(c => c.ConnectionId != activeConnection?.ConnectionId))
+            // Print the rest of the connections
+            foreach (var connection in connections.Where(c => !c.EnvironmentName.Equals(activeConnectionName, StringComparison.OrdinalIgnoreCase)))
             {
-                _outputManager.PrintInfo("         " +connection.ToString());
+                _outputManager.PrintInfo(FormatConnectionLine("", connection));
             }
         }
         catch(Exception ex)
         {
             _outputManager.PrintError($"An unexpected error occurred: {ex.Message}");
         }
+    }
+
+    private string FormatConnectionLine(string status, ConnectionDetailsUnsecure connection)
+    {
+        return string.Format("{0,-10} {1,-25} {2,-25} {3}",
+            status,
+            connection.EnvironmentName,
+            connection.ConnectionType,
+            connection.Identifier);
     }
 }

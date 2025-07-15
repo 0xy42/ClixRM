@@ -52,7 +52,38 @@ namespace ClixRM.Commands.Auth
 
         private async Task HandleUserLogin(string url, string connectionName, bool doSetActive)
         {
+            _outputManager.PrintInfo($"Attempting to log in to environment: {url}");
+            _outputManager.PrintInfo("Your web browser will now open for your sign in. Please complete authentication there.");
 
+            try
+            {
+                var connectionDetails = await _authService.AuthenticateWithUserAsync(url, connectionName);
+
+                _storage.SaveConnection(connectionDetails);
+
+                bool wasSetActive = false;
+                if (_storage.GetActiveConnectionIdentifier() == null || doSetActive)
+                {
+                    _storage.SetActiveEnvironment(connectionName);
+                    wasSetActive = true;
+                }
+
+                _outputManager.PrintSuccess($"Successfully logged in as {connectionDetails.UserPrincipalName}.");
+                _outputManager.PrintSuccess($"Connection {connectionDetails.EnvironmentName} has been saved.");
+
+                if (wasSetActive)
+                {
+                    _outputManager.PrintSuccess($"Connection {connectionDetails.EnvironmentName} has been set as active environment.");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _outputManager.PrintWarning("Authentication was cancelled by the user. No connection was saved.");
+            }
+            catch (Exception ex)
+            {
+                _outputManager.PrintError($"\nAn unexpected error occurred during login: {ex.Message}");
+            }
         }
     }
 }
