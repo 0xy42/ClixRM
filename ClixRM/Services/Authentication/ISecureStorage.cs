@@ -4,13 +4,14 @@ namespace ClixRM.Services.Authentication;
 
 public interface ISecureStorage
 {
-    void SaveConnection(AppRegistrationConnectionDetails connection);
-    AppRegistrationConnectionDetails GetConnection(string environment);
+    void SaveConnection(ConnectionDetails connection);
+    ConnectionDetails GetConnection(string environment);
+    IEnumerable<ConnectionDetailsUnsecure> ListConnectionsUnsecure();
+
     void RemoveConnection(string environment);
     void RemoveAllConnections();
-    IDictionary<string, AppRegistrationConnectionDetails> LoadAllConnections();
-
-    // Modified methods
     void SetActiveEnvironment(string environmentName);
     ActiveConnectionIdentifier? GetActiveConnectionIdentifier();
+
+    IDictionary<string, ConnectionDetails> LoadAllConnections();
 }

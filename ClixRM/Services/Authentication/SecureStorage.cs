@@ -24,8 +24,9 @@ public class SecureStorage : ISecureStorage
 
         if (!OperatingSystem.IsWindows())
         {
-            _logger.LogError("SecureStorage currently relies on Windows DPAPI and is not supported on this platform.");
-            throw new PlatformNotSupportedException("SecureStorage currently relies on Windows DPAPI and is not supported on this platform.");
+            var errorMsg = "SecureStorage currently relies on Windows DPAPI and is not supported on this platform.";
+            _logger.LogError(errorMsg);
+            throw new PlatformNotSupportedException(errorMsg);
         }
 
         var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -34,12 +35,169 @@ public class SecureStorage : ISecureStorage
 
         Directory.CreateDirectory(secureStoragePath);
 
-        _storageFilePath = Path.Combine(secureStoragePath, "connections.v2.dpapi");
+        _storageFilePath = Path.Combine(secureStoragePath, "connections.v3.dpapi");
         _activeEnvironmentFilePath = Path.Combine(secureStoragePath, "active_connection_identifier.v2.json");
     }
 
-    // Static method needs its own way to get paths or be refactored.
-    // For now, let's keep it, but ideally, it would use an instance or have paths passed.
+    public void SaveConnection(ConnectionDetails connection)
+    {
+        var connections = LoadAllConnections();
+        connections[connection.EnvironmentName.ToLower()] = connection;
+
+        var json = JsonSerializer.Serialize(connections);
+        var encryptedData = EncryptData(json);
+
+        File.WriteAllBytes(_storageFilePath, encryptedData);
+        _logger.LogInformation("Connection for environment '{EnvironmentName} saved.'", connection.EnvironmentName);
+    }
+
+    public ConnectionDetails GetConnection(string environmentName)
+    {
+        var connections = LoadAllConnections();
+        if (connections.TryGetValue(environmentName.ToLower(), out var connection))
+        {
+            return connection;
+        }
+
+        _logger.LogWarning("No connection found for environment {EnvironmentName}.", environmentName);
+        throw new KeyNotFoundException($"No connection found for environment {environmentName}");
+    }
+
+    public IEnumerable<ConnectionDetailsUnsecure> ListConnectionsUnsecure()
+    {
+        var connections = LoadAllConnections();
+        return connections.Values.Select(c => c switch
+        {
+            UserConnectionDetails user => new ConnectionDetailsUnsecure(user.EnvironmentName, user.Url, user.ConnectionType, user.UserPrincipalName),
+            AppSecretConnectionDetails app => new ConnectionDetailsUnsecure(app.EnvironmentName, app.Url, app.ConnectionType, $"App ID: {app.ClientId}"),
+            _ => new ConnectionDetailsUnsecure(c.EnvironmentName, c.Url, "Unknown", "N/A")
+        });
+    }
+
+    public IDictionary<string, ConnectionDetails> LoadAllConnections()
+    {
+        if (!File.Exists(_storageFilePath))
+        {
+            return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        try
+        {
+            var encryptedData = File.ReadAllBytes(_storageFilePath);
+            if (encryptedData.Length == 0) return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+
+            var json = DecryptData(encryptedData);
+            var deserialized = JsonSerializer.Deserialize<Dictionary<string, ConnectionDetails>>(json);
+
+            return deserialized == null
+                ? new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, ConnectionDetails>(deserialized, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogError(ex, "Error decrypting connection file '{StorageFilePath}'. Data may be corrupted or inaccessible.", _storageFilePath);
+            return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Error deserializing decrypted connection data from '{StorageFilePath}'. File may be corrupted.", _storageFilePath);
+            return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "Error reading connection file '{StorageFilePath}'.", _storageFilePath);
+            return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unexpected error occurred.");
+            return new Dictionary<string, ConnectionDetails>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    public void RemoveConnection(string environmentName)
+    {
+        var connections = LoadAllConnections();
+        var lowerEnvironmentName = environmentName.ToLower();
+
+        if (!connections.Remove(lowerEnvironmentName))
+        {
+            _logger.LogInformation("Attempted to remove non-existent connection for {EnvironmentName}.", environmentName);
+            return;
+        }
+
+        var activeIdentifier = GetActiveConnectionIdentifier();
+        if (activeIdentifier?.EnvironmentName.Equals(lowerEnvironmentName, StringComparison.OrdinalIgnoreCase) == true)
+        {
+            if (File.Exists(_activeEnvironmentFilePath))
+            {
+                File.Delete(_activeEnvironmentFilePath);
+                _logger.LogInformation("Active connection identifier file deleted as it matched removed environment {EnvironmentName}.", environmentName);
+            }
+        }
+
+        if (connections.Count == 0)
+        {
+            if (File.Exists(_storageFilePath)) File.Delete(_storageFilePath);
+            _logger.LogInformation("All connection removed, storage file deleted.");
+        }
+        else
+        {
+            var json = JsonSerializer.Serialize(connections);
+            var encryptedData = EncryptData(json);
+            File.WriteAllBytes(_storageFilePath, encryptedData);
+        }
+
+        _logger.LogInformation("Connection for environment {EnvironmentName} removed.", environmentName);
+    }
+
+    public void RemoveAllConnections()
+    {
+        if (File.Exists(_storageFilePath)) File.Delete(_storageFilePath);
+        if (File.Exists(_activeEnvironmentFilePath)) File.Delete(_activeEnvironmentFilePath);
+        _logger.LogInformation("All connections and active identifier removed.");
+    }
+
+    public void SetActiveEnvironment(string environmentName)
+    {
+        var lowerEnvironmentName = environmentName.ToLower();
+        var connection = GetConnection(lowerEnvironmentName);
+        var activeIdentifier = new ActiveConnectionIdentifier(lowerEnvironmentName, connection.ConnectionId);
+        var json = JsonSerializer.Serialize(activeIdentifier);
+        File.WriteAllText(_activeEnvironmentFilePath, json);
+        _logger.LogInformation("Active environment set to {EnvironmentName}.", environmentName);
+    }
+
+    public ActiveConnectionIdentifier? GetActiveConnectionIdentifier()
+    {
+        if (!File.Exists(_activeEnvironmentFilePath)) return null;
+
+        try
+        {
+            var json = File.ReadAllText(_activeEnvironmentFilePath);
+            return string.IsNullOrEmpty(json)
+                ? null
+                : JsonSerializer.Deserialize<ActiveConnectionIdentifier>(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reading/deserializing active connection identifier from '{ActiveEnvFilePath}.", _activeEnvironmentFilePath);
+            return null;
+        }
+    }
+
+    private byte[] EncryptData(string plainText)
+    {
+        var dataBytes = Encoding.UTF8.GetBytes(plainText);
+        return ProtectedData.Protect(dataBytes, SEntropy, DataProtectionScope.CurrentUser);
+    }
+
+    private string DecryptData(byte[] encryptedData)
+    {
+        var dataBytes = ProtectedData.Unprotect(encryptedData, SEntropy, DataProtectionScope.CurrentUser);
+        return Encoding.UTF8.GetString(dataBytes);
+    }
+
     public static bool DoesActiveConnectionExist()
     {
         if (!OperatingSystem.IsWindows()) return false;
@@ -62,149 +220,5 @@ public class SecureStorage : ISecureStorage
             Console.Error.WriteLine($"Error checking active connection: {ex.Message}");
             return false;
         }
-    }
-
-    public void SaveConnection(AppRegistrationConnectionDetails connection)
-    {
-        var connections = LoadAllConnections();
-        connections[connection.EnvironmentName.ToLower()] = connection;
-        var json = JsonSerializer.Serialize(connections);
-        var encryptedData = EncryptData(json);
-        File.WriteAllBytes(_storageFilePath, encryptedData);
-        _logger.LogInformation("Connection for environment '{EnvironmentName}' saved.", connection.EnvironmentName);
-    }
-
-    public AppRegistrationConnectionDetails GetConnection(string environmentName)
-    {
-        var connections = LoadAllConnections();
-        if (connections.TryGetValue(environmentName.ToLower(), out var connection))
-        {
-            return connection;
-        }
-        _logger.LogWarning("No connection found for environment '{EnvironmentName}'.", environmentName);
-        throw new KeyNotFoundException($"No connection found for environment '{environmentName}'.");
-    }
-
-    public void RemoveConnection(string environmentName)
-    {
-        var connections = LoadAllConnections();
-        var lowerEnvironmentName = environmentName.ToLower();
-
-        if (!connections.Remove(lowerEnvironmentName))
-        {
-            _logger.LogInformation("Attempted to remove non-existent connection for environment '{EnvironmentName}'.", environmentName);
-            return;
-        }
-
-        var activeIdentifier = GetActiveConnectionIdentifier();
-        if (activeIdentifier?.EnvironmentName.Equals(lowerEnvironmentName, StringComparison.OrdinalIgnoreCase) == true)
-        {
-            if (File.Exists(_activeEnvironmentFilePath))
-            {
-                File.Delete(_activeEnvironmentFilePath);
-                _logger.LogInformation("Active connection identifier file deleted as it matched removed environment '{EnvironmentName}'.", environmentName);
-            }
-        }
-
-        if (connections.Count == 0)
-        {
-            if (File.Exists(_storageFilePath)) File.Delete(_storageFilePath);
-            _logger.LogInformation("All connections removed. Storage file deleted.");
-        }
-        else
-        {
-            var json = JsonSerializer.Serialize(connections);
-            var encryptedData = EncryptData(json);
-            File.WriteAllBytes(_storageFilePath, encryptedData);
-        }
-        _logger.LogInformation("Connection for environment '{EnvironmentName}' removed.", environmentName);
-    }
-
-    public void RemoveAllConnections()
-    {
-        if (File.Exists(_storageFilePath)) File.Delete(_storageFilePath);
-        if (File.Exists(_activeEnvironmentFilePath)) File.Delete(_activeEnvironmentFilePath);
-        _logger.LogInformation("All connections and active identifier removed.");
-    }
-
-    public IDictionary<string, AppRegistrationConnectionDetails> LoadAllConnections()
-    {
-        if (!File.Exists(_storageFilePath))
-        {
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        try
-        {
-            var encryptedData = File.ReadAllBytes(_storageFilePath);
-            var json = DecryptData(encryptedData);
-            var deserialized = JsonSerializer.Deserialize<Dictionary<string, AppRegistrationConnectionDetails>>(json);
-
-            return deserialized == null
-                ? new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, AppRegistrationConnectionDetails>(deserialized, StringComparer.OrdinalIgnoreCase);
-        }
-        catch (CryptographicException ex)
-        {
-            _logger.LogError(ex, "Error decrypting connection file '{StorageFilePath}'. Data may be corrupted or inaccessible.", _storageFilePath);
-            // It might be safer to delete the corrupted file to avoid repeated errors, or rename it.
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Error deserializing decrypted connection data from '{StorageFilePath}'. File may be corrupted.", _storageFilePath);
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
-        }
-        catch (IOException ex)
-        {
-            _logger.LogError(ex, "Error reading connection file '{StorageFilePath}'.", _storageFilePath);
-            return new Dictionary<string, AppRegistrationConnectionDetails>(StringComparer.OrdinalIgnoreCase);
-        }
-    }
-
-    public void SetActiveEnvironment(string environmentName)
-    {
-        var lowerEnvironmentName = environmentName.ToLower();
-        var connection = GetConnection(lowerEnvironmentName);
-        var activeIdentifier = new ActiveConnectionIdentifier(lowerEnvironmentName, connection.ConnectionId);
-        var json = JsonSerializer.Serialize(activeIdentifier);
-        File.WriteAllText(_activeEnvironmentFilePath, json);
-        _logger.LogInformation("Active environment set to '{EnvironmentName}'.", environmentName);
-    }
-
-    public ActiveConnectionIdentifier? GetActiveConnectionIdentifier()
-    {
-        if (!File.Exists(_activeEnvironmentFilePath)) return null;
-        try
-        {
-            var json = File.ReadAllText(_activeEnvironmentFilePath);
-            return string.IsNullOrWhiteSpace(json)
-                ? null
-                : JsonSerializer.Deserialize<ActiveConnectionIdentifier>(json);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Error deserializing active connection identifier from '{ActiveEnvFilePath}'. File may be corrupted.", _activeEnvironmentFilePath);
-            return null;
-        }
-        catch (IOException ex)
-        {
-            _logger.LogError(ex, "Error reading active connection identifier file '{ActiveEnvFilePath}'.", _activeEnvironmentFilePath);
-            return null;
-        }
-    }
-
-    private byte[] EncryptData(string plainText)
-    {
-        if (plainText == null) throw new ArgumentNullException(nameof(plainText));
-        var dataBytes = Encoding.UTF8.GetBytes(plainText);
-        return ProtectedData.Protect(dataBytes, SEntropy, DataProtectionScope.CurrentUser);
-    }
-
-    private string DecryptData(byte[] encryptedData)
-    {
-        if (encryptedData == null) throw new ArgumentNullException(nameof(encryptedData));
-        var dataBytes = ProtectedData.Unprotect(encryptedData, SEntropy, DataProtectionScope.CurrentUser);
-        return Encoding.UTF8.GetString(dataBytes);
     }
 }

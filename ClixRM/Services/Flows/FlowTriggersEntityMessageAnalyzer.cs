@@ -22,7 +22,6 @@ public class FlowTriggersEntityMessageAnalyzer : FlowAnalyzerBase
         { "delete", ["DeleteRecord"] },
         { "list", ["ListRecords"] },
         { "get", ["GetItem"] }
-        // Add more mappings as needed
     };
 
     public List<FlowTriggersEntityMessageResult> AnalyzeActionUsage(string solutionDirectory, string entityName, string targetActionName)

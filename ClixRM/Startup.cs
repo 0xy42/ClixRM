@@ -24,11 +24,15 @@ internal static class Startup
 
         //auth
         services.AddTransient<SwitchEnvironmentCommand>();
-        services.AddTransient<LoginCommand>();
+        services.AddTransient<LoginAppCommand>();
+        services.AddTransient<LoginUserCommand>();
         services.AddTransient<AuthCommand>();
+        services.AddTransient<ListCommand>();
+        services.AddTransient<ShowActiveCommand>();
 
         // security
         services.AddTransient<PrivilegeCheckCommand>();
+        services.AddTransient<ListSecurityRolesCommand>();
         services.AddTransient<SecurityCommand>();
 
         // Flow
@@ -42,7 +46,7 @@ internal static class Startup
         // services
         services.AddSingleton<IOutputManager, OutputManager>();
         services.AddSingleton<IDataverseConnector, DataverseConnector>();
-        services.AddSingleton<IPrivilegeChecker, PrivilegeChecker>();
+        services.AddSingleton<ISecurityRoleAnalyzer, SecurityRoleAnalyzer>();
         services.AddSingleton<ISecureStorage, SecureStorage>();
         services.AddTransient<ISolutionDownloader, SolutionDownloader>();
         services.AddTransient<ISolutionPathResolver, SolutionPathResolver>();
