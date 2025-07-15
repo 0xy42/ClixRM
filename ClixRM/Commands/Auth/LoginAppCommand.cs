@@ -5,14 +5,14 @@ using System.Text;
 
 namespace ClixRM.Commands.Auth;
 
-public class LoginCommand : Command
+public class LoginAppCommand : Command
 {
     private readonly ISecureStorage _secureStorage;
     private readonly IAuthService _authService;
     private readonly IOutputManager _outputManager;
 
-    public LoginCommand(ISecureStorage secureStorage, IAuthService authService, IOutputManager outputManager)
-        : base("login", "Authenticate and store connection for an environment")
+    public LoginAppCommand(ISecureStorage secureStorage, IAuthService authService, IOutputManager outputManager)
+        : base("login-app", "Authenticate and store connection for an environment with an app registration.")
     {
         _secureStorage = secureStorage;
         _authService = authService;
@@ -70,7 +70,7 @@ public class LoginCommand : Command
 
         try
         {
-            var connection = await _authService.AuthenticateAsync(clientId, clientSecret, url, connectionName);
+            var connection = await _authService.AuthenticateAppAsync(clientId, clientSecret, url, connectionName);
 
             _secureStorage.SaveConnection(connection);
 

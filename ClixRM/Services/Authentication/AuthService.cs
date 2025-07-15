@@ -7,6 +7,8 @@ namespace ClixRM.Services.Authentication;
 
 public class AuthService : IAuthService
 {
+    private const string PublicClientId = "00533523-8d5b-4d10-909f-af554dec0546";
+
     private readonly ILogger<AuthService> _logger;
     private static readonly HttpClient _httpClient = new();
 
@@ -72,7 +74,7 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<AppRegistrationConnectionDetailsSecure> AuthenticateAsync(
+    public async Task<AppRegistrationConnectionDetailsSecure> AuthenticateAppAsync(
         Guid clientId, string clientSecret, string url, string connectionName)
     {
         _logger.LogInformation("Attempting to authenticate for Client ID: {ClientId}, URL: {Url}, Connection Name: {ConnectionName}",
@@ -135,6 +137,55 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Generic exception during authentication for Client ID {ClientId}.", clientId);
+            throw new InvalidOperationException($"An unexpected error occurred during authentication: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<UserConnectionDetails> AuthenticateWithUserAsync(string url, string connectionName)
+    {
+        _logger.LogInformation("Attempting interactive user authentication for URL: {Url}", url);
+
+        if (!Guid.TryParse(PublicClientId, out var publicClientIdGuid))
+        {
+            const string errorMsg = "The application is not configured correctly for user authentication. The Public Client ID is invalid.";
+            _logger.LogError(errorMsg);
+            throw new InvalidOperationException(errorMsg);
+        }
+
+        try
+        {
+            var app = PublicClientApplicationBuilder.Create(PublicClientId)
+                .WithAuthority(AzureCloudInstance.AzurePublic, "organizations")
+                .WithRedirectUri("http://localhost")
+                .Build();
+
+            var validateUrl = url.EndsWith("/") ? url : $"{url}/";
+            var scopes = new[] { $"{validateUrl}.default" };
+
+            _logger.LogInformation("Acquiring token interactively with scopes: {Scopes}", string.Join(", ", scopes));
+
+            AuthenticationResult result = await app.AcquireTokenInteractive(scopes).ExecuteAsync();
+
+            var authenticatedUserAccount = result.Account;
+            var userPrincipalName = authenticatedUserAccount.Username;
+            var tenantId = Guid.Parse(result.TenantId);
+
+            return new UserConnectionDetails(
+                connectionId: Guid.NewGuid(),
+                environmentName: connectionName.ToLower(),
+                url: url,
+                tenantId: tenantId,
+                clientId: publicClientIdGuid,
+                userPrincipalName: userPrincipalName);
+        }
+        catch (MsalClientException ex) when (ex.ErrorCode == "authentication_canceled")
+        {
+            _logger.LogWarning("User canceled the authentication process in the browser.");
+            throw new OperationCanceledException("Authentication was canceled by the user.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unexpected error occurred during interactive authentication.");
             throw new InvalidOperationException($"An unexpected error occurred during authentication: {ex.Message}", ex);
         }
     }
