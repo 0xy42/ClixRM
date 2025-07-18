@@ -1,5 +1,5 @@
 ﻿using ClixRM.Commands.Auth;
-using ClixRM.Commands.FlowCommands;
+using ClixRM.Commands.Flows;
 using ClixRM.Commands.Security;
 using ClixRM.Services.Authentication;
 using ClixRM.Services.Output;
@@ -13,6 +13,8 @@ using Serilog.Settings.Configuration;
 using Serilog.Sinks.File;
 using System.CommandLine;
 using ClixRM.Commands;
+using ClixRM.Commands.Forms;
+using ClixRM.Services.Forms;
 
 namespace ClixRM;
 
@@ -33,7 +35,8 @@ internal static class Startup
 
         // security
         services.AddTransient<PrivilegeCheckCommand>();
-        services.AddTransient<ListSecurityRolesCommand>();
+        services.AddTransient<ListUserRolesCommand>();
+        services.AddTransient<UsersWithRoleCommand>();
         services.AddTransient<SecurityCommand>();
 
         // Flow
@@ -41,6 +44,10 @@ internal static class Startup
         services.AddTransient<FlowTriggeredByEntityMessageCommand>();
         services.AddTransient<FlowTriggersEntityMessageCommand>();
         services.AddTransient<FlowCommand>();
+
+        // Form
+        services.AddTransient<ScriptHandlerAnalysisCommand>();
+        services.AddTransient<FormCommand>();
 
         services.AddTransient<VersionCommand>();
 
@@ -52,13 +59,16 @@ internal static class Startup
         services.AddTransient<ISolutionDownloader, SolutionDownloader>();
         services.AddTransient<ISolutionPathResolver, SolutionPathResolver>();
         services.AddSingleton<IAuthService, AuthService>();
+        services.AddSingleton<IFormAnalyzer, FormAnalyzer>();
 
+        // setup root command
         services.AddSingleton(provider =>
         {
             var rootCommand = new RootCommand("A CLI Helper tool for various actions and utilities and analysis in Dynamics XRM.");
             rootCommand.AddCommand(provider.GetRequiredService<AuthCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<SecurityCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<FlowCommand>());
+           // rootCommand.AddCommand(provider.GetRequiredService<FormCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<VersionCommand>());
             return rootCommand;
         });

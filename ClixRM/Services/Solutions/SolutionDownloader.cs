@@ -2,6 +2,7 @@
 using ClixRM.Services.Authentication;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Extensions.Configuration;
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using System.IO.Compression;
@@ -111,7 +112,7 @@ public class SolutionDownloader : ISolutionDownloader
         }
 
         ActiveConnectionIdentifier activeConnection;
-        IOrganizationService serviceClient;
+        IOrganizationServiceAsync2 serviceClient;
 
         try
         {
@@ -186,7 +187,7 @@ public class SolutionDownloader : ISolutionDownloader
         }
     }
 
-    private async Task<string?> GetSolutionVersionFromDataverseAsync(IOrganizationService service, string solutionUniqueName)
+    private async Task<string?> GetSolutionVersionFromDataverseAsync(IOrganizationServiceAsync2 service, string solutionUniqueName)
     {
         try
         {
@@ -198,7 +199,7 @@ public class SolutionDownloader : ISolutionDownloader
                     Conditions = { new ConditionExpression("uniquename", ConditionOperator.Equal, solutionUniqueName) }
                 }
             };
-            var results = await Task.Run(() => service.RetrieveMultiple(query));
+            var results = await service.RetrieveMultipleAsync(query);
             if (results.Entities.Count > 0 && results.Entities[0].Contains("version"))
                 return results.Entities[0].GetAttributeValue<string>("version");
         }

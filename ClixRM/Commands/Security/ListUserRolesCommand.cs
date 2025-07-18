@@ -10,13 +10,13 @@ using ClixRM.Services.Security;
 
 namespace ClixRM.Commands.Security
 {
-    public class ListSecurityRolesCommand : CrmConnectedCommand
+    public class ListUserRolesCommand : CrmConnectedCommand
     {
         private readonly IOutputManager _outputManager;
         private readonly ISecurityRoleAnalyzer _securityRoleAnalyzer;
 
-        public ListSecurityRolesCommand(IOutputManager outputManager, ISecurityRoleAnalyzer securityRoleAnalyzer)
-            : base("list-security-roles", "Check if a user has a specific security role assigned (directly or via teams).")
+        public ListUserRolesCommand(IOutputManager outputManager, ISecurityRoleAnalyzer securityRoleAnalyzer)
+            : base("list-user-roles", "List all security roles assigned to a specific user (directly or via teams).")
         {
             _outputManager = outputManager;
             _securityRoleAnalyzer = securityRoleAnalyzer;

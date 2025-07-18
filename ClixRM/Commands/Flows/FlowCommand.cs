@@ -1,6 +1,6 @@
 ﻿using System.CommandLine;
 
-namespace ClixRM.Commands.FlowCommands
+namespace ClixRM.Commands.Flows
 {
     public class FlowCommand : Command
     {
