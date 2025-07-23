@@ -38,7 +38,7 @@ jobs:
           Compress-Archive -Path ./publish_framework_dependent/* -DestinationPath ./artifacts_framework_dependent/ClixRM_Windows_${{ env.VERSION }}.zip
 
       - name: Publish Bundled Windows Build (Single File)
-        run: dotnet publish ./ClixRM/ClixRM.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=true -p:Version=${{ env.VERSION }} -p:InformationalVersion=${{ env.VERSION }} --output ./publish_bundled
+        run: dotnet publish ./ClixRM/ClixRM.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:Version=${{ env.VERSION }} -p:InformationalVersion=${{ env.VERSION }} --output ./publish_bundled
 
       - name: Create Bundled Build Artifact
         run: |
