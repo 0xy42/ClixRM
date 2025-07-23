@@ -52,10 +52,12 @@ public class ShowActiveCommand : Command
 
     private string FormatConnectionLine(string status, ConnectionDetailsUnsecure connection)
     {
-        return string.Format("{0,-10} {1,-25} {2,-25} {3}",
+        return string.Format("{0,-10} {1,-25} {2,-30} {3,-50} {4}",
             status,
             connection.EnvironmentName,
             connection.ConnectionType,
-            connection.Identifier);
+            connection.Identifier,
+            connection.Url ?? ""
+        );
     }
 }
