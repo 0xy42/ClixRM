@@ -4,7 +4,7 @@ using ClixRM.Services.Solutions;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
-namespace ClixRM.Commands.FlowCommands;
+namespace ClixRM.Commands.Flows;
 
 public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
 {

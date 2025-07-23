@@ -3,7 +3,7 @@ using ClixRM.Services.Output;
 using ClixRM.Services.Solutions;
 using System.CommandLine;
 
-namespace ClixRM.Commands.FlowCommands;
+namespace ClixRM.Commands.Flows;
 
 public class ColumnDependencyCheckCommand : SolutionAwareCommand
 {

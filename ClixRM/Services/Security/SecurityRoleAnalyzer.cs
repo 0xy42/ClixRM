@@ -1,27 +1,12 @@
-﻿using System.Data;
+﻿using System.CommandLine.Help;
+using System.Data;
+using ClixRM.Models;
 using ClixRM.Services.Authentication;
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 
 namespace ClixRM.Services.Security;
-
-public record PrivilegeCheckResult(
-    string GrantType,
-    string RoleName,
-    Guid RoleId,
-    string PrivilegeName,
-    string PrivilegeScope,
-    string? TeamName,
-    Guid? TeamId
-);
-
-public record SecurityRoleCheckResult(
-    string GrantType,
-    string RoleName, 
-    Guid RoleId,
-    string? TeamName,
-    Guid? TeamId
-);
 
 public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISecurityRoleAnalyzer
 {
@@ -36,7 +21,7 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
         var serviceClient = await dataverseConnector.GetServiceClientAsync();
         var results = new List<PrivilegeCheckResult>();
 
-        var privilegeId = await Task.Run(() => GetPrivilegeId(serviceClient, privilegeName));
+        var privilegeId = await GetPrivilegeId(serviceClient, privilegeName);
         if (privilegeId.Equals(Guid.Empty))
         {
             throw new Exception("Privilege not found in the system.");
@@ -56,7 +41,7 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
         var serviceClient = await dataverseConnector.GetServiceClientAsync();
         var results = new List<SecurityRoleCheckResult>();
         
-        var directRoles = GetDirectSecurityRoles(serviceClient, userId);
+        var directRoles = await GetDirectSecurityRolesAsync(serviceClient, userId);
 
         foreach ( var role in directRoles.Entities )
         {
@@ -74,12 +59,12 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             );
         } 
 
-        var teams = GetUserTeams(serviceClient, userId);
+        var teams = await GetUserTeamsAsync(serviceClient, userId);
         foreach (var team in teams.Entities)
         {
             var teamName = team.GetAttributeValue<AliasedValue>("team.name")?.Value?.ToString() ?? "Unknown Team";
             var teamId = team.GetAttributeValue<Guid>("teamid");
-            var teamRoles = GetTeamSecurityRoles(serviceClient, teamId);
+            var teamRoles = await GetTeamSecurityRolesAsync(serviceClient, teamId);
 
             foreach (var teamRole in teamRoles.Entities)
             {
@@ -101,7 +86,56 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
         return results; 
     }
 
-    private Guid GetPrivilegeId(IOrganizationService serviceClient, string privilegeName)
+    public async Task<List<UserWithRoleResult>> GetUsersWithRoleAsync(string roleName)
+    {
+        var serviceClient = await dataverseConnector.GetServiceClientAsync();
+        var roleId = await GetRoleIdByNameAsync(serviceClient, roleName);
+
+        if (roleId.Equals(Guid.Empty))
+        {
+            throw new Exception($"Security role with name '{roleName}' does not exist.");
+        }
+
+        return await GetUsersWithRoleAsync(roleId);
+    }
+
+
+    public async Task<List<UserWithRoleResult>> GetUsersWithRoleAsync(Guid roleId)
+    {
+        var serviceClient = await dataverseConnector.GetServiceClientAsync();
+        var results = new List<UserWithRoleResult>();
+
+        var directUsers = await GetUsersWithDirectRoleAsync(serviceClient, roleId);
+
+        foreach (var directUser in directUsers.Entities)
+        {
+            var userId = directUser.GetAttributeValue<Guid>("systemuserid");
+            var userName = directUser.GetAttributeValue<AliasedValue>("user.fullname")?.Value?.ToString() ?? "Unkown User";
+
+            results.Add(new UserWithRoleResult("Direct", userId, userName, null, null));
+        }
+
+        var teamsWithRole = await GetTeamsWithRoleAsync(serviceClient, roleId);
+
+        foreach (var team in teamsWithRole.Entities)
+        {
+            var teamId = team.GetAttributeValue<Guid>("teamid");
+            var teamName = team.GetAttributeValue<AliasedValue>("team.name")?.Value?.ToString() ?? "Unkown Team";
+
+            var usersInTeam = await GetUsersInTeamAsync(serviceClient, teamId);
+            foreach (var user in usersInTeam.Entities)
+            {
+                var userId = user.GetAttributeValue<Guid>("systemuserid");
+                var userName = user.GetAttributeValue<AliasedValue>("user.fullname")?.Value?.ToString() ?? "Unkown User";
+
+                results.Add(new UserWithRoleResult("Team", userId, userName, teamName, teamId));
+            }
+        }
+
+        return results;
+    }
+
+    private async Task<Guid> GetPrivilegeId(IOrganizationServiceAsync2 serviceClient, string privilegeName)
     {
         var query = new QueryExpression("privilege")
         {
@@ -109,7 +143,7 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             Criteria = { Conditions = { new ConditionExpression("name", ConditionOperator.Equal, privilegeName) } }
         };
 
-        var result = serviceClient.RetrieveMultiple(query);
+        var result = await serviceClient.RetrieveMultipleAsync(query);
         return result.Entities.Count > 0 ? result.Entities[0].GetAttributeValue<Guid>("privilegeid") : Guid.Empty;
     }
 
@@ -117,9 +151,9 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
     ///     Checks roles assigned directly to the user.
     /// </summary>
     /// <returns>A list of PrivilegeCheckResult for directly granted privileges.</returns>
-    private List<PrivilegeCheckResult> CheckDirectSecurityRoles(IOrganizationService serviceClient, Guid userId, Guid privilegeId, string privilegeName)
+    private async Task<List<PrivilegeCheckResult>> CheckDirectSecurityRoles(IOrganizationServiceAsync2 serviceClient, Guid userId, Guid privilegeId, string privilegeName)
     {
-        var directRoles = GetDirectSecurityRoles(serviceClient, userId);
+        var directRoles = await GetDirectSecurityRolesAsync(serviceClient, userId);
         var directResults = new List<PrivilegeCheckResult>();
 
         foreach (var role in directRoles.Entities)
@@ -127,7 +161,7 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             var roleId = role.GetAttributeValue<Guid>("roleid");
             var roleName = role.GetAttributeValue<AliasedValue>("role.name")?.Value?.ToString() ?? "Unknown Role";
 
-            var privilegeScope = GetRolePrivilegeLevel(serviceClient, roleId, privilegeId);
+            var privilegeScope = await GetRolePrivilegeLevelAsync(serviceClient, roleId, privilegeId);
             if (privilegeScope != null)
             {
                 directResults.Add(new PrivilegeCheckResult(
@@ -148,23 +182,23 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
     ///     Checks roles assigned via teams the user is a member of.
     /// </summary>
     /// <returns>A list of PrivilegeCheckResult for team-granted privileges.</returns>
-    private List<PrivilegeCheckResult> CheckTeamSecurityRoles(IOrganizationService serviceClient, Guid userId, Guid privilegeId, string privilegeName) // Added privilegeName param
+    private async Task<List<PrivilegeCheckResult>> CheckTeamSecurityRoles(IOrganizationServiceAsync2 serviceClient, Guid userId, Guid privilegeId, string privilegeName) // Added privilegeName param
     {
-        var teams = GetUserTeams(serviceClient, userId);
+        var teams = await GetUserTeamsAsync(serviceClient, userId);
         var teamResults = new List<PrivilegeCheckResult>();
 
         foreach (var team in teams.Entities)
         {
             var teamName = team.GetAttributeValue<AliasedValue>("team.name")?.Value?.ToString() ?? "Unknown Team";
             var teamId = team.GetAttributeValue<Guid>("teamid");
-            var teamRoles = GetTeamSecurityRoles(serviceClient, teamId);
+            var teamRoles = await GetTeamSecurityRolesAsync(serviceClient, teamId);
 
             foreach (var role in teamRoles.Entities)
             {
                 var roleName = role.GetAttributeValue<AliasedValue>("role.name")?.Value?.ToString() ?? "Unknown Role";
                 var roleId = role.GetAttributeValue<Guid>("roleid");
 
-                var privilegeScope = GetRolePrivilegeLevel(serviceClient, roleId, privilegeId);
+                var privilegeScope = await GetRolePrivilegeLevelAsync(serviceClient, roleId, privilegeId);
                 if (privilegeScope != null)
                 {
                     teamResults.Add(new PrivilegeCheckResult(
@@ -182,7 +216,7 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
         return teamResults;
     }
 
-    private EntityCollection GetDirectSecurityRoles(IOrganizationService serviceClient, Guid userId)
+    private async Task<EntityCollection> GetDirectSecurityRolesAsync(IOrganizationServiceAsync2 serviceClient, Guid userId)
     {
         var query = new QueryExpression("systemuserroles")
         {
@@ -194,10 +228,11 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             Columns = new ColumnSet("name"),
             EntityAlias = "role"
         });
-        return serviceClient.RetrieveMultiple(query);
+
+        return await serviceClient.RetrieveMultipleAsync(query);
     }
 
-    private EntityCollection GetUserTeams(IOrganizationService serviceClient, Guid userId)
+    private async Task<EntityCollection> GetUserTeamsAsync(IOrganizationServiceAsync2 serviceClient, Guid userId)
     {
         var query = new QueryExpression("teammembership")
         {
@@ -209,10 +244,11 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             Columns = new ColumnSet("name"),
             EntityAlias = "team"
         });
-        return serviceClient.RetrieveMultiple(query);
+
+        return await serviceClient.RetrieveMultipleAsync(query);
     }
 
-    private EntityCollection GetTeamSecurityRoles(IOrganizationService serviceClient, Guid teamId)
+    private async Task<EntityCollection> GetTeamSecurityRolesAsync(IOrganizationServiceAsync2 serviceClient, Guid teamId)
     {
         var query = new QueryExpression("teamroles")
         {
@@ -224,22 +260,11 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             Columns = new ColumnSet("name"),
             EntityAlias = "role"
         });
-        return serviceClient.RetrieveMultiple(query);
+
+        return await serviceClient.RetrieveMultipleAsync(query);
     }
 
-    private string GetPrivilegeLevelDescription(int privilegeDepthMask)
-    {
-        return privilegeDepthMask switch
-        {
-            1 => "User",
-            2 => "Business Unit",
-            4 => "Parent: Child Business Units",
-            8 => "Organization",
-            _ => "None"
-        };
-    }
-
-    private string? GetRolePrivilegeLevel(IOrganizationService serviceClient, Guid roleId, Guid privilegeId)
+    private async Task<string?> GetRolePrivilegeLevelAsync(IOrganizationServiceAsync2 serviceClient, Guid roleId, Guid privilegeId)
     {
         var query = new QueryExpression("roleprivileges")
         {
@@ -255,13 +280,114 @@ public class SecurityRoleAnalyzer(IDataverseConnector dataverseConnector) : ISec
             }
         };
 
-        var result = serviceClient.RetrieveMultiple(query);
+        var result = await serviceClient.RetrieveMultipleAsync(query);
 
         if (!result.Entities.Any()) return null;
 
         if (!result.Entities[0].Contains("privilegedepthmask")) return null;
 
         var privilegeDepthMask = result.Entities[0].GetAttributeValue<int>("privilegedepthmask");
+
         return GetPrivilegeLevelDescription(privilegeDepthMask);
+    }
+
+    private string GetPrivilegeLevelDescription(int privilegeDepthMask)
+    {
+        return privilegeDepthMask switch
+        {
+            1 => "User",
+            2 => "Business Unit",
+            4 => "Parent: Child Business Units",
+            8 => "Organization",
+            _ => "None"
+        };
+    }
+
+    private async Task<EntityCollection> GetUsersWithDirectRoleAsync(IOrganizationServiceAsync2 serviceClient, Guid roleId)
+    {
+        var query = new QueryExpression("systemuserroles")
+        {
+            ColumnSet = new ColumnSet("systemuserid"),
+            Criteria =
+            {
+                Conditions =
+                {
+                    new ConditionExpression("roleid", ConditionOperator.Equal, roleId)
+                }
+            }
+        };
+
+        query.LinkEntities.Add(new LinkEntity("systemuserroles", "systemuser", "systemuserid", "systemuserid", JoinOperator.Inner)
+        {
+            Columns = new ColumnSet("fullname"),
+            EntityAlias = "user"
+        });
+
+        return await serviceClient.RetrieveMultipleAsync(query);
+    }
+
+    private async Task<EntityCollection> GetTeamsWithRoleAsync(IOrganizationServiceAsync2 serviceClient, Guid roleId)
+    {
+        var query = new QueryExpression("teamroles")
+        {
+            ColumnSet = new ColumnSet("teamid"),
+            Criteria =
+            {
+                Conditions =
+                {
+                    new ConditionExpression("roleid", ConditionOperator.Equal, roleId)
+                }
+            }
+        };
+
+        query.LinkEntities.Add(new LinkEntity("teamroles", "team", "teamid", "teamid", JoinOperator.Inner)
+        {
+            Columns = new ColumnSet("name"),
+            EntityAlias = "team"
+        });
+
+        return await serviceClient.RetrieveMultipleAsync(query);
+    }
+
+    private async Task<EntityCollection> GetUsersInTeamAsync(IOrganizationServiceAsync2 serviceClient, Guid teamId)
+    {
+        var query = new QueryExpression("teammembership")
+        {
+            ColumnSet = new ColumnSet("systemuserid"),
+            Criteria =
+            {
+                Conditions =
+                {
+                    new ConditionExpression("teamid", ConditionOperator.Equal, teamId)
+                }
+            }
+        };
+
+        query.LinkEntities.Add(new LinkEntity("teammembership", "systemuser", "systemuserid", "systemuserid", JoinOperator.Inner)
+        {
+            Columns = new ColumnSet("fullname"),
+            EntityAlias = "user"
+        });
+
+        return await serviceClient.RetrieveMultipleAsync(query);
+    }
+
+    private async Task<Guid> GetRoleIdByNameAsync(IOrganizationServiceAsync2 service, string roleName)
+    {
+        var query = new QueryExpression("role")
+        {
+            ColumnSet = new ColumnSet("roleid", "name"),
+            Criteria =
+            {
+                Conditions =
+                {
+                    new ConditionExpression("name", ConditionOperator.Equal, roleName)
+                }
+            }
+        };
+
+        var result = await service.RetrieveMultipleAsync(query);
+
+        return result.Entities.FirstOrDefault()?.Id ?? Guid.Empty;
     }
 }

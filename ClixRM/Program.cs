@@ -29,8 +29,6 @@ public class Program
 
             Startup.ConfigureServices(services, configuration);
 
-            Log.Debug("TEST DEBUG LOG");
-
             var serviceProvider = services.BuildServiceProvider();
 
             var rootCommand = serviceProvider.GetRequiredService<RootCommand>();
