@@ -58,7 +58,7 @@ public class UsersWithRoleCommand : CrmConnectedCommand
 
     private static Option<string> CreateRoleNameOption()
     {
-        return new Option<string>(["--name", "-n"], "The GUID of the security role to analyze.")
+        return new Option<string>(["--name", "-n"], "The name of the security role to analyze.")
         {
             ArgumentHelpName = "roleName"
         };

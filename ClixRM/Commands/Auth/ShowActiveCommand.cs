@@ -42,11 +42,20 @@ public class ShowActiveCommand : Command
                 activeConnection.ConnectionType,
                 activeConnection.ClientId.ToString());
 
-            _outputManager.PrintSuccess(activeConnection.ToString());
+            _outputManager.PrintSuccess(FormatConnectionLine("Active", unsecureOutput));
         }
         catch (Exception ex)
         {
             _outputManager.PrintError($"An unexpected error occurred: {ex.Message}");
         }
+    }
+
+    private string FormatConnectionLine(string status, ConnectionDetailsUnsecure connection)
+    {
+        return string.Format("{0,-10} {1,-25} {2,-25} {3}",
+            status,
+            connection.EnvironmentName,
+            connection.ConnectionType,
+            connection.Identifier);
     }
 }
