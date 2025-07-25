@@ -1,4 +1,6 @@
-﻿namespace ClixRM.Services.Output;
+﻿using ClixRM.Sdk.Services;
+
+namespace ClixRM.Services.Output;
 
 public class OutputManager : IOutputManager
 {

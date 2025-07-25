@@ -2,6 +2,8 @@
 using ClixRM.Services.Output;
 using ClixRM.Services.Solutions;
 using System.CommandLine;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Flows;
 

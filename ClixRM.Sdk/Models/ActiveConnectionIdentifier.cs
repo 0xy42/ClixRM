@@ -1,4 +1,4 @@
-﻿namespace ClixRM.Models;
+﻿namespace ClixRM.Sdk.Models;
 
 public record ActiveConnectionIdentifier(
     string EnvironmentName,

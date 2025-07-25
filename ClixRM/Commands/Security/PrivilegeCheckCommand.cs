@@ -3,6 +3,8 @@ using ClixRM.Services.Security;
 using Microsoft.Extensions.Configuration;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Security;
 
@@ -11,8 +13,8 @@ public class PrivilegeCheckCommand : CrmConnectedCommand
     private readonly ISecurityRoleAnalyzer _privilegeChecker;
     private readonly IOutputManager _outputManager;
 
-    public PrivilegeCheckCommand(ISecurityRoleAnalyzer privilegeChecker, IConfiguration configuration, IOutputManager outputManager)
-        : base("privilege-check", "Check how a specific privilege is granted to a user (directly or via teams).")
+    public PrivilegeCheckCommand(ISecurityRoleAnalyzer privilegeChecker, IConfiguration configuration, IOutputManager outputManager, IActiveConnectionGuard activeConnectionGuard)
+        : base("privilege-check", "Check how a specific privilege is granted to a user (directly or via teams).", activeConnectionGuard)
     {
         _privilegeChecker = privilegeChecker;
         _outputManager = outputManager;

@@ -5,6 +5,8 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Output;
 using ClixRM.Services.Security;
 
@@ -15,8 +17,8 @@ namespace ClixRM.Commands.Security
         private readonly IOutputManager _outputManager;
         private readonly ISecurityRoleAnalyzer _securityRoleAnalyzer;
 
-        public ListUserRolesCommand(IOutputManager outputManager, ISecurityRoleAnalyzer securityRoleAnalyzer)
-            : base("list-user-roles", "List all security roles assigned to a specific user (directly or via teams).")
+        public ListUserRolesCommand(IOutputManager outputManager, ISecurityRoleAnalyzer securityRoleAnalyzer, IActiveConnectionGuard activeConnectionGuard)
+            : base("list-user-roles", "List all security roles assigned to a specific user (directly or via teams).", activeConnectionGuard)
         {
             _outputManager = outputManager;
             _securityRoleAnalyzer = securityRoleAnalyzer;

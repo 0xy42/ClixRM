@@ -2,6 +2,7 @@
 using ClixRM.Services.Output;
 using System.CommandLine;
 using System.Text;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Auth;
 

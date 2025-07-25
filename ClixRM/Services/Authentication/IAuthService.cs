@@ -1,4 +1,5 @@
 ﻿using ClixRM.Models;
+using ClixRM.Sdk.Models;
 
 namespace ClixRM.Services.Authentication
 {

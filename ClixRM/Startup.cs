@@ -3,7 +3,6 @@ using ClixRM.Commands.Flows;
 using ClixRM.Commands.Security;
 using ClixRM.Services.Authentication;
 using ClixRM.Services.Output;
-using ClixRM.Services.Processing;
 using ClixRM.Services.Security;
 using ClixRM.Services.Solutions;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +13,7 @@ using Serilog.Sinks.File;
 using System.CommandLine;
 using ClixRM.Commands;
 using ClixRM.Commands.Forms;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Forms;
 
 namespace ClixRM;
@@ -48,14 +48,13 @@ internal static class Startup
         // Form
         services.AddTransient<ScriptHandlerAnalysisCommand>();
         services.AddTransient<FormCommand>();
-
-        services.AddTransient<VersionCommand>();
-
+        
         // services
         services.AddSingleton<IOutputManager, OutputManager>();
         services.AddSingleton<IDataverseConnector, DataverseConnector>();
         services.AddSingleton<ISecurityRoleAnalyzer, SecurityRoleAnalyzer>();
         services.AddSingleton<ISecureStorage, SecureStorage>();
+        services.AddSingleton<IActiveConnectionGuard, ActiveConnectionGuard>();
         services.AddTransient<ISolutionDownloader, SolutionDownloader>();
         services.AddTransient<ISolutionPathResolver, SolutionPathResolver>();
         services.AddSingleton<IAuthService, AuthService>();
@@ -69,7 +68,6 @@ internal static class Startup
             rootCommand.AddCommand(provider.GetRequiredService<SecurityCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<FlowCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<FormCommand>());
-            rootCommand.AddCommand(provider.GetRequiredService<VersionCommand>());
             return rootCommand;
         });
     }

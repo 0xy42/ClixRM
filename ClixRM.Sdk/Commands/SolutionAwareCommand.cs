@@ -1,6 +1,6 @@
 ﻿using System.CommandLine;
 
-namespace ClixRM.Commands;
+namespace ClixRM.Sdk.Commands;
 
 public abstract class SolutionAwareCommand : Command
 {

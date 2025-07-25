@@ -3,6 +3,8 @@ using ClixRM.Services.Output;
 using ClixRM.Services.Solutions;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Flows;
 /// <summary>
@@ -14,7 +16,7 @@ public class FlowTriggersEntityMessageCommand : SolutionAwareCommand
     private readonly IOutputManager _outputManager;
     private readonly ISolutionPathResolver _solutionPathResolver;
 
-    private static readonly string[] AllowedOperations = FlowTriggersEntityMessageAnalyzer.ActionNameToOperationIdMap.Keys.ToArray();
+    private static readonly string[] AllowedOperations = FlowAttributes.ActionNameToOperationIdMap.Keys.ToArray();
 
     public FlowTriggersEntityMessageCommand(
         IOutputManager outputManager,

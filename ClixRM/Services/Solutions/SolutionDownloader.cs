@@ -8,6 +8,8 @@ using Microsoft.Xrm.Sdk.Query;
 using System.IO.Compression;
 using System.ServiceModel;
 using System.Text.Json;
+using ClixRM.Sdk.Models;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Services.Solutions;
 

@@ -1,5 +1,6 @@
 ﻿using ClixRM.Services.Authentication;
 using System.CommandLine;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Auth;
 

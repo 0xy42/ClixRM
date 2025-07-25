@@ -3,6 +3,8 @@ using ClixRM.Services.Output;
 using ClixRM.Services.Solutions;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Flows;
 

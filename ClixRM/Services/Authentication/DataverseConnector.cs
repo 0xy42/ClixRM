@@ -1,4 +1,6 @@
 ﻿using ClixRM.Models;
+using ClixRM.Sdk.Models;
+using ClixRM.Sdk.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.PowerPlatform.Dataverse.Client;

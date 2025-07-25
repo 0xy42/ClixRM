@@ -4,6 +4,8 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using ClixRM.Sdk.Models;
+using ClixRM.Sdk.Services;
 
 namespace ClixRM.Services.Authentication;
 
@@ -51,16 +53,16 @@ public class SecureStorage : ISecureStorage
         _logger.LogInformation("Connection for environment '{EnvironmentName} saved.'", connection.EnvironmentName);
     }
 
-    public ConnectionDetails GetConnection(string environmentName)
+    public ConnectionDetails GetConnection(string name)
     {
         var connections = LoadAllConnections();
-        if (connections.TryGetValue(environmentName.ToLower(), out var connection))
+        if (connections.TryGetValue(name.ToLower(), out var connection))
         {
             return connection;
         }
 
-        _logger.LogWarning("No connection found for environment {EnvironmentName}.", environmentName);
-        throw new KeyNotFoundException($"No connection found for environment {environmentName}");
+        _logger.LogWarning("No connection found for environment {EnvironmentName}.", name);
+        throw new KeyNotFoundException($"No connection found for environment {name}");
     }
 
     public IEnumerable<ConnectionDetailsUnsecure> ListConnectionsUnsecure()
@@ -115,14 +117,14 @@ public class SecureStorage : ISecureStorage
         }
     }
 
-    public void RemoveConnection(string environmentName)
+    public void RemoveConnection(string name)
     {
         var connections = LoadAllConnections();
-        var lowerEnvironmentName = environmentName.ToLower();
+        var lowerEnvironmentName = name.ToLower();
 
         if (!connections.Remove(lowerEnvironmentName))
         {
-            _logger.LogInformation("Attempted to remove non-existent connection for {EnvironmentName}.", environmentName);
+            _logger.LogInformation("Attempted to remove non-existent connection for {EnvironmentName}.", name);
             return;
         }
 
@@ -132,7 +134,7 @@ public class SecureStorage : ISecureStorage
             if (File.Exists(_activeEnvironmentFilePath))
             {
                 File.Delete(_activeEnvironmentFilePath);
-                _logger.LogInformation("Active connection identifier file deleted as it matched removed environment {EnvironmentName}.", environmentName);
+                _logger.LogInformation("Active connection identifier file deleted as it matched removed environment {EnvironmentName}.", name);
             }
         }
 
@@ -148,7 +150,7 @@ public class SecureStorage : ISecureStorage
             File.WriteAllBytes(_storageFilePath, encryptedData);
         }
 
-        _logger.LogInformation("Connection for environment {EnvironmentName} removed.", environmentName);
+        _logger.LogInformation("Connection for environment {EnvironmentName} removed.", name);
     }
 
     public void RemoveAllConnections()
@@ -198,7 +200,7 @@ public class SecureStorage : ISecureStorage
         return Encoding.UTF8.GetString(dataBytes);
     }
 
-    public static bool DoesActiveConnectionExist()
+    public bool DoesActiveConnectionExist()
     {
         if (!OperatingSystem.IsWindows()) return false;
 
