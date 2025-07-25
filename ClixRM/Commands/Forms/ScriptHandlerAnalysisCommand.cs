@@ -21,7 +21,7 @@ namespace ClixRM.Commands.Forms
             _formAnalyzer = formAnalyzer;
 
             var entityNameOption = CreateEntityNameOption();
-            var formNameOption = CreateFormNameOption();
+            var formNameOption = CreateFormGuidOption();
 
             AddOption(entityNameOption);
             AddOption(formNameOption);
@@ -38,20 +38,20 @@ namespace ClixRM.Commands.Forms
             };
         }
 
-        private static Option<string> CreateFormNameOption()
+        private static Option<Guid> CreateFormGuidOption()
         {
-            return new Option<string>(["--formName", "-f"], "The logical name of the form to analyze.")
+            return new Option<Guid>(["--formId", "-f"], "The GUID of the form to analyze.")
             {
                 IsRequired = true,
                 ArgumentHelpName = "name"
             };
         }
 
-        private async Task HandleScriptHandlerAnalysisAsync(string entityName, string formName)
+        private async Task HandleScriptHandlerAnalysisAsync(string entityName, Guid formId)
         {
             try
             {
-                var analysis = await _formAnalyzer.AnalyzeFormAsync(entityName, formName);
+                var analysis = await _formAnalyzer.AnalyzeFormAsync(entityName, formId);
 
                 if (analysis.Libraries.Count == 0)
                 {
@@ -93,7 +93,7 @@ namespace ClixRM.Commands.Forms
                             else
                             {
                                 _outputManager.PrintInfo(
-                                    $"- [Field: {handler.ControlId}] {handler.FunctionName} (Library: {handler.LibraryName} " +
+                                    $"- [Field: {handler.ControlId}] {handler.FunctionName} (Library: {handler.LibraryName}) " +
                                     $"Enabled: {handler.Enabled}"
                                 );
                             }
@@ -103,7 +103,7 @@ namespace ClixRM.Commands.Forms
             }
             catch (Exception ex)
             {
-                _outputManager.PrintError($"An error occurred during privilege check: {ex.Message}");
+                _outputManager.PrintError($"An error occurred during form analysis: {ex.Message}");
             }
         }
     }

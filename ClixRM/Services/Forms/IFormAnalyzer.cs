@@ -9,6 +9,6 @@ namespace ClixRM.Services.Forms
 {
     public interface IFormAnalyzer
     {
-        Task<FormAnalysisResult> AnalyzeFormAsync(string entityName, string formName);
+        Task<FormAnalysisResult> AnalyzeFormAsync(string entityName, Guid formName);
     }
 }

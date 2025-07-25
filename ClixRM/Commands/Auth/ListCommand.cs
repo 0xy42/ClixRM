@@ -39,8 +39,8 @@ public class ListCommand : Command
             var activeConnectionIdentifier = _storage.GetActiveConnectionIdentifier();
             string? activeConnectionName = activeConnectionIdentifier?.EnvironmentName;
 
-            _outputManager.PrintInfo(string.Format("{0,-10} {1,-25} {2,-25} {3}", "Status", "Name", "Type", "Identifier"));
-            _outputManager.PrintInfo(new string('-', 70));
+            _outputManager.PrintInfo(string.Format("{0,-10} {1,-25} {2,-30} {3,-50} {4}", "Status", "Name", "Type", "Identifier", "URL"));
+            _outputManager.PrintInfo(new string('-', 150));
 
             if (activeConnectionName != null)
             {
@@ -68,10 +68,12 @@ public class ListCommand : Command
 
     private string FormatConnectionLine(string status, ConnectionDetailsUnsecure connection)
     {
-        return string.Format("{0,-10} {1,-25} {2,-25} {3}",
+        return string.Format("{0,-10} {1,-25} {2,-30} {3,-50} {4}",
             status,
             connection.EnvironmentName,
             connection.ConnectionType,
-            connection.Identifier);
+            connection.Identifier,
+            connection.Url ?? ""
+        );
     }
 }

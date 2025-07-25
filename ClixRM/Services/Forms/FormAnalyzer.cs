@@ -20,7 +20,7 @@ public class FormAnalyzer : IFormAnalyzer
         _dataverseConnector = dataverseConnector;
     }
 
-    public async Task<FormAnalysisResult> AnalyzeFormAsync(string entityName, string formName)
+    public async Task<FormAnalysisResult> AnalyzeFormAsync(string entityName, Guid formName)
     {
         var serviceClient = await _dataverseConnector.GetServiceClientAsync();
 
@@ -34,21 +34,21 @@ public class FormAnalyzer : IFormAnalyzer
         return ParseFormXml(formXml, formName);
     }
 
-    private async Task<string?> GetFormXmlAsync(IOrganizationServiceAsync2 service, string entityName, string formName)
+    private async Task<string?> GetFormXmlAsync(IOrganizationServiceAsync2 service, string entityName, Guid formId)
     {
         // TODO: implement parameterization
         const int formTypeMain = 2;
 
         var query = new QueryExpression("systemform")
         {
-            ColumnSet = new ColumnSet("formxml"),
+            ColumnSet = new ColumnSet("formxml", "name"),
             Criteria =
             {
                 FilterOperator = LogicalOperator.And,
                 Conditions =
                 {
                     new ConditionExpression("objecttypecode", ConditionOperator.Equal, entityName),
-                    new ConditionExpression("name", ConditionOperator.Equal, formName),
+                    new ConditionExpression("formid", ConditionOperator.Equal, formId),
                     new ConditionExpression("type", ConditionOperator.Equal, formTypeMain)
                 }
             }
@@ -60,66 +60,67 @@ public class FormAnalyzer : IFormAnalyzer
         return formEntity?.GetAttributeValue<string>("formxml");
     }
 
-    private FormAnalysisResult ParseFormXml(string formXml, string formName)
+    private FormAnalysisResult ParseFormXml(string formXml, Guid formId)
     {
         var doc = XDocument.Parse(formXml);
 
-        var ns = doc.Root?.GetDefaultNamespace() ?? XNamespace.None;
+        var libraries = new HashSet<string>();
 
-        var libraries = doc.Descendants(ns + "library")
-            .Select(lib => new FormLibrary(
-                lib.Attribute("name")?.Value ?? string.Empty,
-                lib.Attribute("displayName")?.Value ?? string.Empty
-                ))
-            .ToList();
+        libraries.UnionWith(
+            doc.Descendants("Library")
+                .Select(lib => lib.Attribute("name")?.Value ?? string.Empty)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+        );
 
+        libraries.UnionWith(
+            doc.Descendants("Handler")
+                .Select(h => h.Attribute("libraryName")?.Value ?? string.Empty)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+        );
+
+        libraries.UnionWith(
+            doc.Descendants("internaljscriptfile")
+                .Select(js => js.Attribute("src")?.Value ?? string.Empty)
+                .Where(src => src.StartsWith("$webresource:"))
+                .Select(src => src.Replace("$webresource:", ""))
+        );
+
+        var libraryList = libraries.Select(name => new FormLibrary(name, name)).ToList();
+
+        // Only one loop over <event>
         var eventHandlers = new List<FormEventHandler>();
-
-        var formEvents = doc.Descendants(ns + "form").Elements(ns + "events").Elements(ns + "event");
+        var formEvents = doc.Descendants("events").Elements("event");
         foreach (var ev in formEvents)
         {
             var eventName = ev.Attribute("name")?.Value;
-            if (eventName == null) continue;
+            var controlId = ev.Attribute("attribute")?.Value;
 
-            foreach (var handler in ev.Elements(ns + "Handler"))
+            foreach (var handler in ev.Elements("Handlers").Elements("Handler"))
             {
                 eventHandlers.Add(new FormEventHandler(
-                    EventName: eventName,
-                    FunctionName: handler.Attribute("functionname")?.Value ?? string.Empty,
+                    EventName: eventName ?? "",
+                    FunctionName: handler.Attribute("functionName")?.Value ?? handler.Attribute("functionname")?.Value ?? string.Empty,
                     LibraryName: handler.Attribute("libraryName")?.Value ?? string.Empty,
-                    Enabled: bool.Parse(handler.Attribute("enabled")?.Value ?? "false")
+                    Enabled: bool.TryParse(handler.Attribute("enabled")?.Value, out var enabled) ? enabled : false,
+                    ControlId: controlId
                 ));
             }
-        }
-
-        var controlEvents = doc.Descendants(ns + "control")
-            .Where(c => c.Element(ns + "events") != null);
-
-        foreach (var control in controlEvents)
-        {
-            var controlId = control.Attribute("id")?.Value;
-            foreach (var ev in control.Elements(ns + "events").Elements(ns + "event"))
+            foreach (var handler in ev.Elements("InternalHandlers").Elements("Handler"))
             {
-                var eventName = ev.Attribute("name")?.Value;
-                if (eventName == null) continue;
-
-                foreach(var handler in ev.Elements(ns + "Handler"))
-                {
-                    eventHandlers.Add(new FormEventHandler(
-                        EventName: eventName,
-                        FunctionName: handler.Attribute("libraryName")?.Value ?? string.Empty,
-                        LibraryName: handler.Attribute("libraryName")?.Value ?? string.Empty,
-                        Enabled: bool.Parse(handler.Attribute("enabled")?.Value ?? "false"),
-                        ControlId: controlId
-                    ));
-                }
+                eventHandlers.Add(new FormEventHandler(
+                    EventName: eventName ?? "",
+                    FunctionName: handler.Attribute("functionName")?.Value ?? handler.Attribute("functionname")?.Value ?? string.Empty,
+                    LibraryName: handler.Attribute("libraryName")?.Value ?? string.Empty,
+                    Enabled: bool.TryParse(handler.Attribute("enabled")?.Value, out var enabled) ? enabled : false,
+                    ControlId: controlId
+                ));
             }
         }
 
         return new FormAnalysisResult
         {
-            FormName = formName,
-            Libraries = libraries,
+            FormId = formId,
+            Libraries = libraryList,
             EventHandlers = eventHandlers
         };
     }

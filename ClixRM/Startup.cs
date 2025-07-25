@@ -68,7 +68,7 @@ internal static class Startup
             rootCommand.AddCommand(provider.GetRequiredService<AuthCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<SecurityCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<FlowCommand>());
-           // rootCommand.AddCommand(provider.GetRequiredService<FormCommand>());
+            rootCommand.AddCommand(provider.GetRequiredService<FormCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<VersionCommand>());
             return rootCommand;
         });
