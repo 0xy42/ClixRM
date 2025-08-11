@@ -21,7 +21,7 @@ namespace ClixRM.Models
 
     public record FormAnalysisResult
     {
-        public Guid FormId { get; init; } = new();
+        public Guid FormId { get; init; }
         public List<FormLibrary> Libraries { get; init; } = [];
         public List<FormEventHandler> EventHandlers { get; init; } = [];
     }

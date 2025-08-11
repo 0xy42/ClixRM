@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace ClixRM.Services.Flows;
+namespace ClixRM.FirstParty.Services.Flows;
 
 public record FlowTriggersEntityMessageResult(
     string ActionName,

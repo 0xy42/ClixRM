@@ -1,5 +1,4 @@
 ﻿using ClixRM.Commands.Auth;
-using ClixRM.Commands.Flows;
 using ClixRM.Commands.Security;
 using ClixRM.Services.Authentication;
 using ClixRM.Services.Output;
@@ -40,10 +39,10 @@ internal static class Startup
         services.AddTransient<SecurityCommand>();
 
         // Flow
-        services.AddTransient<ColumnDependencyCheckCommand>();
-        services.AddTransient<FlowTriggeredByEntityMessageCommand>();
-        services.AddTransient<FlowTriggersEntityMessageCommand>();
-        services.AddTransient<FlowCommand>();
+        //services.AddTransient<ColumnDependencyCheckCommand>();
+        //services.AddTransient<FlowTriggeredByEntityMessageCommand>();
+        //services.AddTransient<FlowTriggersEntityMessageCommand>();
+        //services.AddTransient<FlowCommand>();
 
         // Form
         services.AddTransient<ScriptHandlerAnalysisCommand>();
@@ -66,7 +65,7 @@ internal static class Startup
             var rootCommand = new RootCommand("A CLI Helper tool for various actions and utilities and analysis in Dynamics XRM.");
             rootCommand.AddCommand(provider.GetRequiredService<AuthCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<SecurityCommand>());
-            rootCommand.AddCommand(provider.GetRequiredService<FlowCommand>());
+            //rootCommand.AddCommand(provider.GetRequiredService<FlowCommand>());
             rootCommand.AddCommand(provider.GetRequiredService<FormCommand>());
             return rootCommand;
         });

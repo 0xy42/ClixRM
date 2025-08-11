@@ -32,4 +32,9 @@
     <ProjectReference Include="..\ClixRM.Sdk\ClixRM.Sdk.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Commands\Flows\" />
+    <Folder Include="Services\Flows\" />
+  </ItemGroup>
+
 </Project>

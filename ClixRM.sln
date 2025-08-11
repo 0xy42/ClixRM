@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35919.96 d17.13
+VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClixRM", "ClixRM\ClixRM.csproj", "{922FE212-6EA9-445F-9C3F-52C3CF0CB051}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClixRM.Sdk", "ClixRM.Sdk\ClixRM.Sdk.csproj", "{41A1F4A1-9B19-4FA4-B405-70A939C367A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClixRM.FirstParty", "ClixRM.FirstParty\ClixRM.FirstParty.csproj", "{567701F4-8C9C-4015-95D5-D03DAFEFE42B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{41A1F4A1-9B19-4FA4-B405-70A939C367A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{41A1F4A1-9B19-4FA4-B405-70A939C367A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{41A1F4A1-9B19-4FA4-B405-70A939C367A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{567701F4-8C9C-4015-95D5-D03DAFEFE42B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{567701F4-8C9C-4015-95D5-D03DAFEFE42B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{567701F4-8C9C-4015-95D5-D03DAFEFE42B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{567701F4-8C9C-4015-95D5-D03DAFEFE42B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

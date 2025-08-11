@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace ClixRM.Services.Flows
+namespace ClixRM.FirstParty.Services.Flows
 {
     /// <summary>
     ///     Base class providing common functionality for analyzing Power Automate flow JSON files.

@@ -1,12 +1,10 @@
-﻿using ClixRM.Services.Flows;
-using ClixRM.Services.Output;
-using ClixRM.Services.Solutions;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Parsing;
+using ClixRM.FirstParty.Services.Flows;
 using ClixRM.Sdk.Commands;
 using ClixRM.Sdk.Services;
 
-namespace ClixRM.Commands.Flows;
+namespace ClixRM.FirstParty.Commands.Flows;
 
 public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
 {
