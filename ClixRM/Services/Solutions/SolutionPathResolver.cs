@@ -1,7 +1,6 @@
-﻿using ClixRM.Services.Output;
-using ClixRM.Services.Solutions;
+﻿using ClixRM.Sdk.Services;
 
-namespace ClixRM.Services.Processing; // Or a namespace like ClixRM.Services.Shared
+namespace ClixRM.Services.Solutions;
 
 
 public class SolutionPathResolver : ISolutionPathResolver

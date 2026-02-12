@@ -1,6 +1,7 @@
 ﻿using System.CommandLine.Help;
 using System.Data;
 using ClixRM.Models;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Authentication;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;

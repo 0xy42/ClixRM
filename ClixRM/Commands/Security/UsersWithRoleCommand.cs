@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ClixRM.Models;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Output;
 using ClixRM.Services.Security;
 
@@ -16,8 +18,8 @@ public class UsersWithRoleCommand : CrmConnectedCommand
     private readonly ISecurityRoleAnalyzer _analyzer;
     private readonly IOutputManager _outputManager;
 
-    public UsersWithRoleCommand(ISecurityRoleAnalyzer analyzer, IOutputManager outputManager) 
-        : base ("users-with-role", "List all users of an environment that are assigned a specific security role (directly or via teams).")
+    public UsersWithRoleCommand(ISecurityRoleAnalyzer analyzer, IOutputManager outputManager, IActiveConnectionGuard activeConnectionGuard) 
+        : base ("users-with-role", "List all users of an environment that are assigned a specific security role (directly or via teams).", activeConnectionGuard)
     {
         _analyzer = analyzer;
         _outputManager = outputManager;

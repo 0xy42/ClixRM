@@ -1,4 +1,6 @@
 ﻿using ClixRM.Models;
+using ClixRM.Sdk.Models;
+using ClixRM.Sdk.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.PowerPlatform.Dataverse.Client;
@@ -26,11 +28,31 @@ public class DataverseConnector : IDataverseConnector
         var activeIdentifier = GetActiveConnectionIdentifier();
         var connectionDetails = _secureStorage.GetConnection(activeIdentifier.EnvironmentName);
 
+        return await CreateServiceClientFromConnection(connectionDetails);
+    }
+
+    public async Task<IOrganizationServiceAsync2> GetServiceClientAsync(string environmentName)
+    {
+        _logger.LogInformation("Getting service client for specified environment: {EnvironmentName}", environmentName);
+
+        var connectionDetails = _secureStorage.GetConnection(environmentName);
+
+        if (connectionDetails == null)
+        {
+            _logger.LogError("Connection '{EnvironmentName}' not found.", environmentName);
+            throw new InvalidOperationException($"Connection '{environmentName}' not found. Please ensure the connection exists.");
+        }
+
+        return await CreateServiceClientFromConnection(connectionDetails);
+    }
+
+    private async Task<IOrganizationServiceAsync2> CreateServiceClientFromConnection(ConnectionDetails connectionDetails)
+    {
         string accessToken;
 
         switch (connectionDetails)
         {
-            case AppSecretConnectionDetails appDetails: 
+            case AppSecretConnectionDetails appDetails:
                 _logger.LogInformation("Acquiring token for App Registration connection: {Name}", appDetails.EnvironmentName);
                 accessToken = await GetTokenForAppAsync(appDetails);
                 break;
@@ -42,7 +64,7 @@ public class DataverseConnector : IDataverseConnector
 
             default:
                 var errorMsg = $"Unsupported connection type found for environment {connectionDetails.EnvironmentName}";
-                _logger.LogError(errorMsg);
+                _logger.LogError("Unsupported connection type found for environment {EnvironmentName}", connectionDetails.EnvironmentName);
                 throw new NotSupportedException(errorMsg);
         }
 
@@ -62,7 +84,7 @@ public class DataverseConnector : IDataverseConnector
             }
 
             _logger.LogInformation("ServiceClient successfully created and ready for environment {EnvironmentName}.", connectionDetails.EnvironmentName);
-            
+
             return serviceClient;
         }
         catch (Exception ex)

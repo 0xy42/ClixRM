@@ -1,0 +1,46 @@
+# ClixRM Plugin Architecture To-Do List
+
+## Phase 1: Foundational SDK and Host Implementation
+
+- [ ] **Create the `ClixRM.Sdk` Project:**
+  - [ ] Rename the abstractions project to `ClixRM.Sdk`.
+  - [ ] Define the core `ICommandPlugin` interface within the SDK.
+
+- [ ] **Populate the SDK with Shared Components:**
+  - [ ] Move the `CrmConnectedCommand` base class into the SDK.
+  - [ ] Move essential service interfaces (`IDataverseConnector`, `ISecureStorage`, `IOutputManager`) into the SDK.
+  - [ ] Move any shared models (`ActiveConnectionIdentifier`) into the SDK.
+
+- [ ] **Implement Plugin Loading in the Host (`ClixRM`):**
+  - [ ] Add logic to `Startup.cs` to scan a `plugins` directory for DLLs.
+  - [ ] For each discovered plugin, instantiate its `ICommandPlugin` implementation.
+  - [ ] Call the plugin's `ConfigureServices` method to register its services/commands with the DI container.
+  - [ ] Retrieve plugin commands from the DI container and add them to the `RootCommand`.
+
+- [ ] **Create a Proof-of-Concept Plugin:**
+  - [ ] Create a separate sample plugin project that references `ClixRM.Sdk`.
+  - [ ] Build a simple command that inherits from `CrmConnectedCommand`.
+  - [ ] Ensure the plugin can use a core service provided by the host (e.g., `IOutputManager`).
+  - [ ] Verify the host loads the plugin and the command works as expected.
+
+## Phase 2: Long-Term Robustness and Quality of Life
+
+- [ ] **Address Dependency Management:**
+  - [ ] Plan for Isolation: Investigate using `AssemblyLoadContext` to prevent dependency conflicts.
+
+- [ ] **Implement a Security Model:**
+  - [ ] User Consent: Implement a prompt for permission before loading a new plugin.
+  - [ ] (Future) Code Signing: Consider a policy to only load signed plugins.
+
+- [ ] **Enhance Plugin User Experience (UX):**
+  - [ ] Management Commands: Create a `clixrm plugins list` command.
+  - [ ] Help Integration: Ensure plugin commands are visible in `--help` output.
+  - [ ] (Future) Lifecycle Commands: Plan for `install` and `uninstall` commands.
+
+- [ ] **Establish a Plugin Configuration Strategy:**
+  - [ ] Design a mechanism for plugins to manage their own settings (e.g., a `plugin_settings` folder).
+
+- [ ] **Define a Strict SDK Versioning Policy:**
+  - [ ] Use Semantic Versioning (SemVer) for `ClixRM.Sdk.dll`.
+  - [ ] Maintain backward compatibility for the SDK.
+  - [ ] Implement a host version check to warn about incompatible plugins.

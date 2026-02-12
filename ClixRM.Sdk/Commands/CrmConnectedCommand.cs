@@ -1,21 +1,22 @@
-﻿using ClixRM.Services.Authentication;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Parsing;
+using ClixRM.Sdk.Services;
 
-
-namespace ClixRM.Commands;
+namespace ClixRM.Sdk.Commands;
 
 public class CrmConnectedCommand : Command
 {
-    protected CrmConnectedCommand(string name, string description)
+    private readonly IActiveConnectionGuard _activeConnectionGuard;
+    protected CrmConnectedCommand(string name, string description,  IActiveConnectionGuard activeConnectionGuard)
         : base(name, description)
     {
+        _activeConnectionGuard = activeConnectionGuard;
         AddValidator(ValidateActiveConnection);
     }
 
     protected void ValidateActiveConnection(CommandResult result)
     {
-        var activeEnvironment = SecureStorage.DoesActiveConnectionExist();
+        var activeEnvironment = _activeConnectionGuard.DoesActiveConnectionExist();
 
         if (!activeEnvironment)
         {

@@ -9,7 +9,7 @@ namespace ClixRM.Commands.Forms
 {
     public class FormCommand : Command
     {
-        public FormCommand(ScriptHandlerAnalysisCommand scriptHandlerAnalysisCommand) : base("form", "Commands for analysis and utilities regarding cloud flows.")
+        public FormCommand(ScriptHandlerAnalysisCommand scriptHandlerAnalysisCommand) : base("form", "Commands for analysis and utilities regarding forms.")
         {
             AddCommand(scriptHandlerAnalysisCommand);
         }

@@ -4,6 +4,8 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ClixRM.Sdk.Commands;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Forms;
 using ClixRM.Services.Output;
 
@@ -14,8 +16,8 @@ namespace ClixRM.Commands.Forms
         private readonly IOutputManager _outputManager;
         private readonly IFormAnalyzer _formAnalyzer;
 
-        public ScriptHandlerAnalysisCommand(IOutputManager outputManager, IFormAnalyzer formAnalyzer) 
-            : base("script-handler-analysis", "Analyze form scripts for registered JavaScript handlers.")
+        public ScriptHandlerAnalysisCommand(IOutputManager outputManager, IFormAnalyzer formAnalyzer, IActiveConnectionGuard activeConnectionGuard) 
+            : base("script-handler-analysis", "Analyze form scripts for registered JavaScript handlers.", activeConnectionGuard)
         {
             _outputManager = outputManager;
             _formAnalyzer = formAnalyzer;
