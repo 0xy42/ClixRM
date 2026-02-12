@@ -102,7 +102,7 @@ public class AuthService : IAuthService
 
             var app = TokenCacheProvider.CreateClientApplication(builder);
 
-            var validateUrl = url.EndsWith("/") ? url : $"{url}/";
+            var validateUrl = url.EndsWith('/') ? url : $"{url}/";
             var scopes = new[] { $"{validateUrl}.default" };
 
             _logger.LogInformation("Acquiring token interactively with scopes: {Scopes}", string.Join(", ", scopes));

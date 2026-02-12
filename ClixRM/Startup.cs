@@ -65,6 +65,7 @@ internal static class Startup
         services.AddSingleton<IAuthService, AuthService>();
         services.AddSingleton<IFormAnalyzer, FormAnalyzer>();
         services.AddSingleton<ISolutionComparer, SolutionComparer>();
+        services.AddSingleton<IComponentMetadataService, ComponentMetadataService>();
 
         // setup root command
         services.AddSingleton(provider =>

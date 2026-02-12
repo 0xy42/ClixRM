@@ -183,7 +183,8 @@ public class SolutionComparerCommand : CrmConnectedCommand
 
         foreach (var group in groupedComponents)
         {
-            _outputManager.PrintInfo($"  Component Type {group.Key}: {group.Count()} component(s)");
+            var componentTypeName = group.First().ComponentTypeName;
+            _outputManager.PrintInfo($"  {componentTypeName} {group.Key}: {group.Count()} component(s)");
             foreach (var component in group.Take(10))
             {
                 _outputManager.PrintInfo($"    - {component.ComponentId}");
