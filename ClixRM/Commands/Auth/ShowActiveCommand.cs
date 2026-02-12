@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ClixRM.Models;
+using ClixRM.Sdk.Models;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Authentication;
 using ClixRM.Services.Output;
 

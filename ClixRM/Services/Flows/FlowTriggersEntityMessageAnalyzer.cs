@@ -15,15 +15,6 @@ public record FlowTriggersEntityMessageResult(
 /// </summary>
 public class FlowTriggersEntityMessageAnalyzer : FlowAnalyzerBase
 {
-    public static readonly Dictionary<string, List<string>> ActionNameToOperationIdMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "create", ["CreateRecord", "UpdateRecord"] },
-        { "update", ["UpdateOnlyRecord", "UpdateRecord"] },
-        { "delete", ["DeleteRecord"] },
-        { "list", ["ListRecords"] },
-        { "get", ["GetItem"] }
-    };
-
     public List<FlowTriggersEntityMessageResult> AnalyzeActionUsage(string solutionDirectory, string entityName, string targetActionName)
     {
         if (string.IsNullOrWhiteSpace(solutionDirectory))
@@ -35,9 +26,9 @@ public class FlowTriggersEntityMessageAnalyzer : FlowAnalyzerBase
         if (string.IsNullOrWhiteSpace(targetActionName))
             throw new ArgumentException("Target action name cannot be null or empty.", nameof(targetActionName));
 
-        if (!ActionNameToOperationIdMap.TryGetValue(targetActionName, out var targetOperationIds) || targetOperationIds == null || !targetOperationIds.Any())
+        if (!FlowAttributes.ActionNameToOperationIdMap.TryGetValue(targetActionName, out var targetOperationIds) || targetOperationIds == null || !targetOperationIds.Any())
         {
-            Console.WriteLine($"Warning: Action name '{targetActionName}' not recognized or has no mapped operations. Allowed keys are: {string.Join(", ", ActionNameToOperationIdMap.Keys)}");
+            Console.WriteLine($"Warning: Action name '{targetActionName}' not recognized or has no mapped operations. Allowed keys are: {string.Join(", ", FlowAttributes.ActionNameToOperationIdMap.Keys)}");
             return [];
         }
 
