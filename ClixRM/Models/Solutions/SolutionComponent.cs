@@ -9,5 +9,6 @@ namespace ClixRM.Models.Solutions;
 public record SolutionComponent(
     Guid ComponentId,
     int ComponentType,
+    string ComponentTypeName,
     string? LogicalName,
     string? DisplayName);

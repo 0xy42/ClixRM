@@ -14,11 +14,13 @@ namespace ClixRM.Services.Solutions;
 
 public class SolutionComparer : ISolutionComparer
 {
+    private readonly IComponentMetadataService _componentMetadataService;
     private readonly IDataverseConnector _dataverseConnector;
     private readonly ILogger<SolutionComparer> _logger;
 
-    public SolutionComparer(IDataverseConnector dataverseConnector, ILogger<SolutionComparer> logger)
+    public SolutionComparer(IComponentMetadataService componentMetadataService, IDataverseConnector dataverseConnector, ILogger<SolutionComparer> logger)
     {
+        _componentMetadataService = componentMetadataService;
         _dataverseConnector = dataverseConnector;
         _logger = logger;
     }
@@ -27,11 +29,13 @@ public class SolutionComparer : ISolutionComparer
     {
         var service = await _dataverseConnector.GetServiceClientAsync();
 
+        var componentTypeMap = await _componentMetadataService.GetComponentTypeMapAsync(service);
+
         _logger.LogInformation("Starting solution comparison. Set1: [{Solutions1}], Set2: [{Solutions2}]",
             string.Join(", ", solutionSet1), string.Join(", ", solutionSet2));
 
-        var componentSet1 = await RetrieveSolutionComponentSet(service, solutionSet1);
-        var componentSet2 = await RetrieveSolutionComponentSet(service, solutionSet2);
+        var componentSet1 = await RetrieveSolutionComponentSet(service, solutionSet1, componentTypeMap);
+        var componentSet2 = await RetrieveSolutionComponentSet(service, solutionSet2, componentTypeMap);
 
         var result = CompareSolutionSets(componentSet1, componentSet2);
 
@@ -50,15 +54,17 @@ public class SolutionComparer : ISolutionComparer
         var service1 = await _dataverseConnector.GetServiceClientAsync(environmentName1);
         var service2 = await _dataverseConnector.GetServiceClientAsync(environmentName2);
 
-        var componentSet1 = await RetrieveSolutionComponentSet(service1, solutionSet1);
-        var componentSet2 = await RetrieveSolutionComponentSet(service2, solutionSet2);
+        var componentTypeMap = await _componentMetadataService.GetComponentTypeMapAsync(service1);
+
+        var componentSet1 = await RetrieveSolutionComponentSet(service1, solutionSet1, componentTypeMap);
+        var componentSet2 = await RetrieveSolutionComponentSet(service2, solutionSet2, componentTypeMap);
 
         var result = CompareSolutionSets(componentSet1, componentSet2);
 
         return result;
     }
 
-    private async Task<SolutionComponentSet> RetrieveSolutionComponentSet(IOrganizationServiceAsync2 service, string[] solutionNames)
+    private async Task<SolutionComponentSet> RetrieveSolutionComponentSet(IOrganizationServiceAsync2 service, string[] solutionNames, Dictionary<int, string> componentTypeMap)
     {
         _logger.LogInformation("Retrieving solution components for solutions: {SolutionNames}", string.Join(", ", solutionNames));
 
@@ -80,7 +86,7 @@ public class SolutionComparer : ISolutionComparer
                 continue;
             }
 
-            var components = await RetrieveSolutionComponentsAsync(service, solutionId, solutionName);
+            var components = await RetrieveSolutionComponentsAsync(service, solutionId, solutionName, componentTypeMap);
 
             _logger.LogInformation("Retrieved {ComponentCount} components for solution '{SolutionName}'", components.Count, solutionName);
 
@@ -121,7 +127,11 @@ public class SolutionComparer : ISolutionComparer
         return results.Entities[0].Id;
     }
 
-    private async Task<List<SolutionComponent>> RetrieveSolutionComponentsAsync(IOrganizationServiceAsync2 service, Guid solutionId, string solutionName)
+    private async Task<List<SolutionComponent>> RetrieveSolutionComponentsAsync(
+        IOrganizationServiceAsync2 service, 
+        Guid solutionId, 
+        string solutionName, 
+        Dictionary<int, string> componentTypeMap)
     {
         var query = new QueryExpression("solutioncomponent")
         {
@@ -143,10 +153,12 @@ public class SolutionComparer : ISolutionComparer
         {
             var componentId = entity.GetAttributeValue<Guid>("objectid");
             var componentType = entity.GetAttributeValue<OptionSetValue>("componenttype")?.Value ?? 0;
+            var componentTypeName = componentTypeMap.TryGetValue(componentType, out var name) ? name : $"Unkown ({componentType})";
 
             components.Add(new SolutionComponent(
                 ComponentId: componentId,
                 ComponentType: componentType,
+                ComponentTypeName: componentTypeName,
                 LogicalName: null,
                 DisplayName: null
             ));
