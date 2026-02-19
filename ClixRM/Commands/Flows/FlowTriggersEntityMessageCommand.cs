@@ -10,7 +10,7 @@ namespace ClixRM.Commands.Flows;
 /// <summary>
 ///     Command to find cloud flows performing specific actions (Create, Update, Delete, etc.) on a given entity.
 /// </summary>
-public class FlowTriggersEntityMessageCommand : SolutionAwareCommand
+public class FlowTriggersEntityMessageCommand : SolutionAwareCommand<List<FlowTriggersEntityMessageResult>>
 {
     private readonly FlowTriggersEntityMessageAnalyzer _analyzer;
     private readonly IOutputManager _outputManager;
@@ -20,9 +20,11 @@ public class FlowTriggersEntityMessageCommand : SolutionAwareCommand
 
     public FlowTriggersEntityMessageCommand(
         IOutputManager outputManager,
-        ISolutionPathResolver solutionPathResolver)
+        ISolutionPathResolver solutionPathResolver,
+        ICommandResultFormatter<List<FlowTriggersEntityMessageResult>> formatter)
         : base("triggers-message",
-               "Check all flows in a solution for triggering specific entity messages (e.g. create account).")
+               "Check all flows in a solution for triggering specific entity messages (e.g. create account).",
+               formatter)
     {
         _outputManager = outputManager;
         _solutionPathResolver = solutionPathResolver;
@@ -39,9 +41,9 @@ public class FlowTriggersEntityMessageCommand : SolutionAwareCommand
             HandleCommandAsync,
             entityOption,
             operationOption,
-            SolutionAwareCommand.OnlineSolutionOption,
-            SolutionAwareCommand.DirectoryOption,
-            SolutionAwareCommand.ForceDownloadOption
+            OnlineSolutionOption,
+            DirectoryOption,
+            ForceDownloadOption
         );
     }
 
@@ -96,25 +98,7 @@ public class FlowTriggersEntityMessageCommand : SolutionAwareCommand
         {
             var results = _analyzer.AnalyzeActionUsage(actualSolutionPathToAnalyze, entityName, messageName);
 
-            if (results.Count == 0)
-            {
-                _outputManager.PrintWarning($"No actions found performing '{messageName}' on entity '{entityName}'.");
-            }
-            else
-            {
-                _outputManager.PrintSuccess($"Found {results.Count} matching actions:");
-                var groupedResults = results.GroupBy(r => r.FileName).OrderBy(g => g.Key);
-                foreach (var group in groupedResults)
-                {
-                    _outputManager.PrintInfo($"\n--- Flow File: {group.Key} ---");
-                    foreach (FlowTriggersEntityMessageResult result in group.OrderBy(r => r.ActionName))
-                    {
-                        _outputManager.PrintInfo(
-                            $"- Action: \"{result.ActionName}\" | Type: {result.ActionType} | Operation: {result.OperationId} | Entity: {result.EntityName}"
-                        );
-                    }
-                }
-            }
+            Formatter.Format(results);
         }
         catch (DirectoryNotFoundException ex)
         {

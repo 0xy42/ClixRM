@@ -15,10 +15,10 @@ namespace ClixRM.Services.Solutions;
 
 public class SolutionDownloader : ISolutionDownloader
 {
-    private const string MetadataFileName = "clixrm_metadata.json";
     private readonly IDataverseConnector _dataverseConnector;
     private readonly string _solutionCacheBaseDirectory;
 
+    private const string MetadataFileName = "clixrm_metadata.json";
     private const string AppRootFolderName = "ClixRM";
     private const string SolutionCacheSubFolderName = "SolutionCache";
 

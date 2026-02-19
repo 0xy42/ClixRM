@@ -1,10 +1,11 @@
 {
   "profiles": {
-    "Clix": {
-      "commandName": "Project"
-    },
     "Container (Dockerfile)": {
       "commandName": "Docker"
+    },
+    "ClixRM": {
+      "commandName": "Project",
+      "commandLineArgs": "auth list"
     }
   }
 }

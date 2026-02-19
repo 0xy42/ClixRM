@@ -5,16 +5,22 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using ClixRM.Sdk.Commands;
 using ClixRM.Sdk.Services;
+using ClixRM.Models;
 
 namespace ClixRM.Commands.Security;
 
-public class PrivilegeCheckCommand : CrmConnectedCommand
+public class PrivilegeCheckCommand : CrmConnectedCommand<List<PrivilegeCheckResult>>
 {
     private readonly ISecurityRoleAnalyzer _privilegeChecker;
     private readonly IOutputManager _outputManager;
 
-    public PrivilegeCheckCommand(ISecurityRoleAnalyzer privilegeChecker, IConfiguration configuration, IOutputManager outputManager, IActiveConnectionGuard activeConnectionGuard)
-        : base("privilege-check", "Check how a specific privilege is granted to a user (directly or via teams).", activeConnectionGuard)
+    public PrivilegeCheckCommand(
+        ISecurityRoleAnalyzer privilegeChecker, 
+        IConfiguration configuration, 
+        IOutputManager outputManager, 
+        IActiveConnectionGuard activeConnectionGuard,
+        ICommandResultFormatter<List<PrivilegeCheckResult>> formatter)
+        : base("privilege-check", "Check how a specific privilege is granted to a user (directly or via teams).", activeConnectionGuard, formatter)
     {
         _privilegeChecker = privilegeChecker;
         _outputManager = outputManager;
@@ -77,31 +83,7 @@ public class PrivilegeCheckCommand : CrmConnectedCommand
         {
             var results = await _privilegeChecker.CheckPrivilegeAsync(userId, privilegeName);
 
-            if (results.Count == 0)
-            {
-                _outputManager.PrintWarning($"Privilege '{privilegeName}' is either not found in the system or not granted to user '{userId}' directly or via teams.");
-            }
-            else
-            {
-                _outputManager.PrintSuccess($"Found {results.Count} grant path(s) for privilege '{privilegeName}':");
-
-                var groupedResults = results.GroupBy(r => r.GrantType).OrderBy(g => g.Key);
-
-                foreach (var group in groupedResults)
-                {
-                    _outputManager.PrintInfo($"\n--- Granted via: {group.Key} ---");
-                    var orderedGroup = group.OrderBy(r => r.RoleName).ThenBy(r => r.TeamName);
-
-                    foreach (var result in orderedGroup)
-                    {
-                        _outputManager.PrintInfo(
-                            result.GrantType == "Direct"
-                                ? $"- Role: \"{result.RoleName}\" ({result.RoleId}) | Scope: {result.PrivilegeScope}"
-                                : $"- Role: \"{result.RoleName}\" ({result.RoleId}) | Team: \"{result.TeamName}\" ({result.TeamId}) | Scope: {result.PrivilegeScope}"
-                        );
-                    }
-                }
-            }
+            Formatter.Format(results);
         }
         catch (Exception ex)
         {

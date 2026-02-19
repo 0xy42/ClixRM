@@ -4,11 +4,11 @@ using ClixRM.Sdk.Services;
 
 namespace ClixRM.Sdk.Commands;
 
-public class CrmConnectedCommand : Command
+public class CrmConnectedCommand<TResult> : ClixRMBaseCommand<TResult>
 {
     private readonly IActiveConnectionGuard _activeConnectionGuard;
-    protected CrmConnectedCommand(string name, string description,  IActiveConnectionGuard activeConnectionGuard)
-        : base(name, description)
+    protected CrmConnectedCommand(string name, string description,  IActiveConnectionGuard activeConnectionGuard, ICommandResultFormatter<TResult> formatter)
+        : base(name, description, formatter)
     {
         _activeConnectionGuard = activeConnectionGuard;
         AddValidator(ValidateActiveConnection);

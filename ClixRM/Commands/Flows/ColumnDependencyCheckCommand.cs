@@ -7,7 +7,7 @@ using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Flows;
 
-public class ColumnDependencyCheckCommand : SolutionAwareCommand
+public class ColumnDependencyCheckCommand : SolutionAwareCommand<List<FieldDependencyResult>>
 {
     private readonly FlowFieldDependencyAnalyzer _analyzer;
     private readonly IOutputManager _outputManager;
@@ -15,9 +15,11 @@ public class ColumnDependencyCheckCommand : SolutionAwareCommand
 
     public ColumnDependencyCheckCommand(
         IOutputManager outputManager,
-        ISolutionPathResolver solutionPathResolver)
+        ISolutionPathResolver solutionPathResolver,
+        ICommandResultFormatter<List<FieldDependencyResult>> formatter)
         : base("column-dependency",
-               "Check all flows in a solution for dependencies on a specific entity field.")
+               "Check all flows in a solution for dependencies on a specific entity field.",
+               formatter)
     {
         _outputManager = outputManager;
         _solutionPathResolver = solutionPathResolver;
@@ -39,9 +41,9 @@ public class ColumnDependencyCheckCommand : SolutionAwareCommand
         this.SetHandler(
             HandleCommandAsync,
             entityOption, columnOption, actionFilterOption, actionsOnlyOption, triggersOnlyOption,
-            SolutionAwareCommand.OnlineSolutionOption,
-            SolutionAwareCommand.DirectoryOption,
-            SolutionAwareCommand.ForceDownloadOption
+            OnlineSolutionOption,
+            DirectoryOption,
+            ForceDownloadOption
         );
     }
     private static Option<string> CreateEntityOption()
@@ -104,25 +106,7 @@ public class ColumnDependencyCheckCommand : SolutionAwareCommand
         {
             var results = _analyzer.AnalyzeFieldUsage(actualSolutionPathToAnalyze, entityName, columnName, actionFilter, actionsOnly, triggersOnly);
 
-            if (results.Count == 0)
-            {
-                _outputManager.PrintWarning($"No dependencies found for field '{columnName}' on entity '{entityName}'.");
-            }
-            else
-            {
-                _outputManager.PrintSuccess($"Found {results.Count} dependencies:");
-                var groupedResults = results.GroupBy(r => r.FileName).OrderBy(g => g.Key);
-                foreach (var group in groupedResults)
-                {
-                    _outputManager.PrintInfo($"\n--- Flow File: {group.Key} ---");
-                    foreach (var result in group.OrderBy(r => r.SourceType).ThenBy(r => r.SourceName))
-                    {
-                        _outputManager.PrintInfo(
-                            $"- {result.SourceType}: \"{result.SourceName}\" | Type: {result.DependencyType} | Entity: {result.EntityName} | Field: {result.FieldName} | Details: {result.Details}"
-                        );
-                    }
-                }
-            }
+            Formatter.Format(results);
         }
         catch (DirectoryNotFoundException ex)
         {

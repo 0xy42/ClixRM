@@ -13,13 +13,17 @@ using ClixRM.Services.Security;
 
 namespace ClixRM.Commands.Security;
 
-public class UsersWithRoleCommand : CrmConnectedCommand
+public class UsersWithRoleCommand : CrmConnectedCommand<List<UserWithRoleResult>>
 {
     private readonly ISecurityRoleAnalyzer _analyzer;
     private readonly IOutputManager _outputManager;
 
-    public UsersWithRoleCommand(ISecurityRoleAnalyzer analyzer, IOutputManager outputManager, IActiveConnectionGuard activeConnectionGuard) 
-        : base ("users-with-role", "List all users of an environment that are assigned a specific security role (directly or via teams).", activeConnectionGuard)
+    public UsersWithRoleCommand(
+        ISecurityRoleAnalyzer analyzer, 
+        IOutputManager outputManager, 
+        IActiveConnectionGuard activeConnectionGuard,
+        ICommandResultFormatter<List<UserWithRoleResult>> formatter) 
+        : base ("users-with-role", "List all users of an environment that are assigned a specific security role (directly or via teams).", activeConnectionGuard, formatter)
     {
         _analyzer = analyzer;
         _outputManager = outputManager;
@@ -81,30 +85,7 @@ public class UsersWithRoleCommand : CrmConnectedCommand
                 results = await _analyzer.GetUsersWithRoleAsync(roleId);
             }
 
-            if (results.Count == 0)
-            {
-                _outputManager.PrintWarning($"Found no users assigned security role '{roleId}.'");
-                return;
-            }
-
-            _outputManager.PrintSuccess($"Found {results.Count} assignments for security role '{roleId}'.");
-
-            var groupedResults = results.GroupBy(r => r.GrantType).OrderBy(g => g.Key);
-
-            foreach (var group in groupedResults)
-            {
-                _outputManager.PrintInfo($"\n--- Assigned via: {group.Key} ---");
-                var orderedGroup = group.OrderBy(r => r.UserName).ThenBy(r => r.TeamName);
-
-                foreach (var result in orderedGroup)
-                {
-                    _outputManager.PrintInfo(
-                        result.GrantType == "Direct"
-                            ? $"- User: \"{result.UserName}\" ({result.UserId})"
-                            : $"- User: \"{result.UserName}\" ({result.UserId}) | Team: \"{result.TeamName}\" ({result.TeamId})"
-                    );
-                }
-            }
+            Formatter.Format(results);
         }
         catch (Exception ex)
         {
