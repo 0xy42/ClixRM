@@ -5,6 +5,7 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ClixRM.Models;
 using ClixRM.Sdk.Commands;
 using ClixRM.Sdk.Services;
 using ClixRM.Services.Output;
@@ -12,13 +13,18 @@ using ClixRM.Services.Security;
 
 namespace ClixRM.Commands.Security
 {
-    public class ListUserRolesCommand : CrmConnectedCommand
+    public class ListUserRolesCommand : CrmConnectedCommand<List<SecurityRoleCheckResult>>
     {
         private readonly IOutputManager _outputManager;
         private readonly ISecurityRoleAnalyzer _securityRoleAnalyzer;
 
-        public ListUserRolesCommand(IOutputManager outputManager, ISecurityRoleAnalyzer securityRoleAnalyzer, IActiveConnectionGuard activeConnectionGuard)
-            : base("list-user-roles", "List all security roles assigned to a specific user (directly or via teams).", activeConnectionGuard)
+        public ListUserRolesCommand(
+            IOutputManager outputManager, 
+            ISecurityRoleAnalyzer securityRoleAnalyzer, 
+            IActiveConnectionGuard activeConnectionGuard, 
+            ICommandResultFormatter<List<SecurityRoleCheckResult>> formatter)
+            : base("list-user-roles", "List all security roles assigned to a specific user (directly or via teams).", 
+                  activeConnectionGuard, formatter)
         {
             _outputManager = outputManager;
             _securityRoleAnalyzer = securityRoleAnalyzer;
@@ -63,31 +69,7 @@ namespace ClixRM.Commands.Security
             {
                 var results = await _securityRoleAnalyzer.CheckSecurityRolesAsync(userId);
 
-                if (results.Count == 0)
-                {
-                    _outputManager.PrintWarning($"Found no security roles assigned to user '{userId}'");
-                }
-                else
-                {
-                    _outputManager.PrintSuccess($"Found {results.Count} security roles for user '{userId}'");
-
-                    var groupedResults = results.GroupBy(r => r.GrantType).OrderBy(g => g.Key);
-
-                    foreach(var group in groupedResults)
-                    {
-                        _outputManager.PrintInfo($"\n--- Granted via: {group.Key} ---");
-                        var orderedGroup = group.OrderBy(r => r.RoleName).ThenBy(r => r.TeamName);
-
-                        foreach (var result in orderedGroup)
-                        {
-                            _outputManager.PrintInfo(
-                            result.GrantType == "Direct"
-                                ? $"- Role: \"{result.RoleName}\" ({result.RoleId})"
-                                : $"- Role: \"{result.RoleName}\" ({result.RoleId}) | Team: \"{result.TeamName}\" ({result.TeamId})"
-                            );
-                        }
-                    }
-                }
+                Formatter.Format(results);
             }
             catch (Exception ex)
             {

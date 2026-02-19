@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ClixRM.Models;
 using ClixRM.Sdk.Commands;
 using ClixRM.Sdk.Services;
 using ClixRM.Services.Forms;
@@ -11,13 +12,17 @@ using ClixRM.Services.Output;
 
 namespace ClixRM.Commands.Forms
 {
-    public class ScriptHandlerAnalysisCommand : CrmConnectedCommand
+    public class ScriptHandlerAnalysisCommand : CrmConnectedCommand<FormAnalysisResult>
     {
         private readonly IOutputManager _outputManager;
         private readonly IFormAnalyzer _formAnalyzer;
 
-        public ScriptHandlerAnalysisCommand(IOutputManager outputManager, IFormAnalyzer formAnalyzer, IActiveConnectionGuard activeConnectionGuard) 
-            : base("script-handler-analysis", "Analyze form scripts for registered JavaScript handlers.", activeConnectionGuard)
+        public ScriptHandlerAnalysisCommand(
+            IOutputManager outputManager, 
+            IFormAnalyzer formAnalyzer, 
+            IActiveConnectionGuard activeConnectionGuard,
+            ICommandResultFormatter<FormAnalysisResult> formatter) 
+            : base("script-handler-analysis", "Analyze form scripts for registered JavaScript handlers.", activeConnectionGuard, formatter)
         {
             _outputManager = outputManager;
             _formAnalyzer = formAnalyzer;
@@ -55,53 +60,7 @@ namespace ClixRM.Commands.Forms
             {
                 var analysis = await _formAnalyzer.AnalyzeFormAsync(entityName, formId);
 
-                if (analysis.Libraries.Count == 0)
-                {
-                    _outputManager.PrintWarning("No JavaScript libraries found on this form.");
-                    return;
-                }
-
-                _outputManager.PrintSuccess($"Found {analysis.Libraries.Count} JavaScript libraries.");
-                foreach(var lib in analysis.Libraries)
-                {
-                    _outputManager.PrintInfo($"- {lib.DisplayName} ({lib.Name})");
-                }
-
-                if (analysis.EventHandlers.Count == 0)
-                {
-                    _outputManager.PrintWarning("No script event handler registered on this form.");
-                } 
-                else
-                {
-                    _outputManager.PrintSuccess($"\nFound {analysis.EventHandlers.Count} script event handlers.");
-
-                    var grouped = analysis.EventHandlers
-                        .OrderBy(h => h.EventName)
-                        .ThenBy(h => h.ControlId ?? string.Empty)
-                        .GroupBy(h => h.EventName);
-
-                    foreach (var evtGroup in grouped)
-                    { 
-                        _outputManager.PrintInfo($"\n--- Event: {evtGroup.Key} ---");
-                        foreach (var handler in evtGroup)
-                        {
-                            if (string.IsNullOrEmpty(handler.ControlId))
-                            {
-                                _outputManager.PrintInfo(
-                                    $"- [Form] {handler.FunctionName} (Library: {handler.LibraryName}) " +
-                                    $"Enabled: {handler.Enabled}"
-                                );
-                            }
-                            else
-                            {
-                                _outputManager.PrintInfo(
-                                    $"- [Field: {handler.ControlId}] {handler.FunctionName} (Library: {handler.LibraryName}) " +
-                                    $"Enabled: {handler.Enabled}"
-                                );
-                            }
-                        }
-                    }
-                }
+                Formatter.Format(analysis);
             }
             catch (Exception ex)
             {

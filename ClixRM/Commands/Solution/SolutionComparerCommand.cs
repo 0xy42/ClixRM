@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ClixRM.Commands.Solution;
 
-public class SolutionComparerCommand : CrmConnectedCommand
+public class SolutionComparerCommand : CrmConnectedCommand<SolutionComparisonResult>
 {
     private readonly ISolutionComparer _solutionComparer;
     private readonly IOutputManager _outputManager;
@@ -21,9 +21,10 @@ public class SolutionComparerCommand : CrmConnectedCommand
     public SolutionComparerCommand(
         ISolutionComparer solutionComparer,
         IOutputManager outputManager,
+        ICommandResultFormatter<SolutionComparisonResult> formatter,
         ILogger<SolutionComparerCommand> logger,
         IActiveConnectionGuard activeConnectionGuard)
-        : base("compare", "Compare two solution sets to identify differences and similarities.", activeConnectionGuard)
+        : base("compare", "Compare two solution sets to identify differences and similarities.", activeConnectionGuard, formatter)
     {
         _solutionComparer = solutionComparer;
         _outputManager = outputManager;
@@ -132,68 +133,11 @@ public class SolutionComparerCommand : CrmConnectedCommand
                 result = await _solutionComparer.CompareSolutionsAsync(solutions1, solutions2);
             }
 
-            FormatAndPrintResult(result);
+            Formatter.Format(result);
         }
         catch (Exception ex)
         {
             _outputManager.PrintError($"An error occurred during solution comparison: {ex.Message}");
-        }
-    }
-
-    private void FormatAndPrintResult(SolutionComparisonResult result)
-    {
-        _outputManager.PrintSuccess("=== Comparison Summary ===");
-        _outputManager.PrintInfo("");
-        _outputManager.PrintInfo($"Total Components in Set 1: {result.Set1Count}");
-        _outputManager.PrintInfo($"Total Components in Set 2: {result.Set2Count}");
-        _outputManager.PrintInfo($"Common Components:         {result.CommonCount}");
-        _outputManager.PrintInfo($"Only in Set 1:             {result.Set1UniqueCount}");
-        _outputManager.PrintInfo($"Only in Set 2:             {result.Set2UniqueCount}");
-        _outputManager.PrintInfo("");
-
-        if (result.OnlyInSet1.Count != 0)
-        {
-            _outputManager.PrintWarning($"=== Components Only in Set 1 ({result.Set1UniqueCount}) ===");
-            PrintComponentList(result.OnlyInSet1);
-            _outputManager.PrintInfo("");
-        }
-
-        if (result.OnlyInSet2.Any())
-        {
-            _outputManager.PrintWarning($"=== Components Only in Set 2 ({result.Set2UniqueCount}) ===");
-            PrintComponentList(result.OnlyInSet2);
-            _outputManager.PrintInfo("");
-        }
-
-        if (result.Set1UniqueCount == 0 && result.Set2UniqueCount == 0)
-        {
-            _outputManager.PrintSuccess("The two solution sets are identical in terms of components.");
-        }
-        else
-        {
-            _outputManager.PrintWarning("The two solution sets have differences in their components.");
-        }
-    }
-
-    private void PrintComponentList(List<SolutionComponent> components)
-    {
-        var groupedComponents = components
-            .GroupBy(c => c.ComponentType)
-            .OrderBy(g => g.Key);
-
-        foreach (var group in groupedComponents)
-        {
-            var componentTypeName = group.First().ComponentTypeName;
-            _outputManager.PrintInfo($"  {componentTypeName} {group.Key}: {group.Count()} component(s)");
-            foreach (var component in group.Take(10))
-            {
-                _outputManager.PrintInfo($"    - {component.ComponentId}");
-            }
-
-            if (group.Count() > 10)
-            {
-                _outputManager.PrintInfo($"    ... and {group.Count() - 10} more");
-            }
         }
     }
 }

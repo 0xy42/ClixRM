@@ -1,7 +1,16 @@
-﻿using ClixRM.Commands.Auth;
+﻿using ClixRM.Commands;
+using ClixRM.Commands.Auth;
 using ClixRM.Commands.Flows;
+using ClixRM.Commands.Forms;
 using ClixRM.Commands.Security;
+using ClixRM.Commands.Solution;
+using ClixRM.Formatter;
+using ClixRM.Models;
+using ClixRM.Models.Solutions;
+using ClixRM.Sdk.Services;
 using ClixRM.Services.Authentication;
+using ClixRM.Services.Flows;
+using ClixRM.Services.Forms;
 using ClixRM.Services.Output;
 using ClixRM.Services.Security;
 using ClixRM.Services.Solutions;
@@ -11,11 +20,6 @@ using Serilog;
 using Serilog.Settings.Configuration;
 using Serilog.Sinks.File;
 using System.CommandLine;
-using ClixRM.Commands;
-using ClixRM.Commands.Forms;
-using ClixRM.Sdk.Services;
-using ClixRM.Services.Forms;
-using ClixRM.Commands.Solution;
 
 namespace ClixRM;
 
@@ -66,6 +70,17 @@ internal static class Startup
         services.AddSingleton<IFormAnalyzer, FormAnalyzer>();
         services.AddSingleton<ISolutionComparer, SolutionComparer>();
         services.AddSingleton<IComponentMetadataService, ComponentMetadataService>();
+
+        // formatters
+        services.AddTransient<ICommandResultFormatter<SolutionComparisonResult>, SolutionComparisonCommandFormatter>();
+        services.AddTransient<ICommandResultFormatter<List<SecurityRoleCheckResult>>, ListUserRolesCommandFormatter>();
+        services.AddTransient<ICommandResultFormatter<List<PrivilegeCheckResult>>, PrivilegeCheckCommandFormatter>();
+        services.AddTransient<ICommandResultFormatter<List<UserWithRoleResult>>, UserWithRoleCommandFormatter>();
+        services.AddTransient<ICommandResultFormatter<FormAnalysisResult>, ScriptHandlerAnalysisCommandFormatter>(); 
+        services.AddTransient<ICommandResultFormatter<List<FieldDependencyResult>>, ColumnDependencyCheckCommandFormatter>();  
+        services.AddTransient<ICommandResultFormatter<List<TriggeredByEntityMessageResult>>, FlowTriggeredByEntityMessageCommandFormatter>();  
+        services.AddTransient<ICommandResultFormatter<List<FlowTriggersEntityMessageResult>>, FlowTriggersEntityMessageCommandFormatter>();
+
 
         // setup root command
         services.AddSingleton(provider =>

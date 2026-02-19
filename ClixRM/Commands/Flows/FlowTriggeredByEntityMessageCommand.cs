@@ -8,7 +8,7 @@ using ClixRM.Sdk.Services;
 
 namespace ClixRM.Commands.Flows;
 
-public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
+public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand<List<TriggeredByEntityMessageResult>>
 {
     private readonly FlowTriggeredByEntityMessageAnalyzer _analyzer;
     private readonly IOutputManager _outputManager;
@@ -16,9 +16,11 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
 
     public FlowTriggeredByEntityMessageCommand(
         IOutputManager outputManager,
-        ISolutionPathResolver solutionPathResolver)
+        ISolutionPathResolver solutionPathResolver,
+        ICommandResultFormatter<List<TriggeredByEntityMessageResult>> formatter)
         : base("triggered-by-message",
-               "Check all flows in a solution for triggers on a specific entity and message.")
+               "Check all flows in a solution for triggers on a specific entity and message.",
+               formatter)
     {
         _outputManager = outputManager;
         _solutionPathResolver = solutionPathResolver;
@@ -35,9 +37,9 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
             HandleCommandAsync,
             entityOption,
             messageOption,
-            SolutionAwareCommand.OnlineSolutionOption,
-            SolutionAwareCommand.DirectoryOption,
-            SolutionAwareCommand.ForceDownloadOption
+            OnlineSolutionOption,
+            DirectoryOption,
+            ForceDownloadOption
         );
     }
 
@@ -89,25 +91,7 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand
         {
             var results = _analyzer.AnalyzeTriggerUsage(actualSolutionPathToAnalyze, entityName, messageName);
 
-            if (results.Count == 0)
-            {
-                _outputManager.PrintWarning($"No triggers found for entity '{entityName}' and event '{messageName}'.");
-            }
-            else
-            {
-                _outputManager.PrintSuccess($"Found {results.Count} matching triggers:");
-                var groupedResults = results.GroupBy(r => r.FileName).OrderBy(g => g.Key);
-                foreach (var group in groupedResults)
-                {
-                    _outputManager.PrintInfo($"\n--- Flow File: {group.Key} ---");
-                    foreach (var result in group.OrderBy(r => r.TriggerName))
-                    {
-                        _outputManager.PrintInfo(
-                             $"- Trigger: \"{result.TriggerName}\" | Event: {result.EventName} | Scope: {result.Scope} | Entity: {result.EntityName}"
-                        );
-                    }
-                }
-            }
+            Formatter.Format(results);
         }
         catch (DirectoryNotFoundException ex)
         {

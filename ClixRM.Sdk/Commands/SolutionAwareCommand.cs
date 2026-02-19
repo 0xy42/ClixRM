@@ -1,8 +1,9 @@
-﻿using System.CommandLine;
+﻿using ClixRM.Sdk.Services;
+using System.CommandLine;
 
 namespace ClixRM.Sdk.Commands;
 
-public abstract class SolutionAwareCommand : Command
+public abstract class SolutionAwareCommand<TResult> : ClixRMBaseCommand<TResult>
 {
     protected static readonly Option<string> OnlineSolutionOption = new(
         aliases: ["--online-solution", "-s"],
@@ -13,7 +14,7 @@ public abstract class SolutionAwareCommand : Command
 
     protected static readonly Option<string> DirectoryOption = new(
         aliases: ["--dir", "-d"],
-        description: "The path to the unzipped solution directory containing cloud flows.")
+        description: "The path to the unzipped solution directory.")
     {
         ArgumentHelpName = "directory-path"
     };
@@ -25,8 +26,9 @@ public abstract class SolutionAwareCommand : Command
 
     protected SolutionAwareCommand(
         string name,
-        string description)
-        : base(name, description)
+        string description,
+        ICommandResultFormatter<TResult> formatter)
+        : base(name, description, formatter)
     {
         AddOption(OnlineSolutionOption);
         AddOption(DirectoryOption);
