@@ -37,7 +37,6 @@ public class FormAnalyzer : IFormAnalyzer
 
     private async Task<string?> GetFormXmlAsync(IOrganizationServiceAsync2 service, string entityName, Guid formId)
     {
-        // TODO: implement parameterization
         const int formTypeMain = 2;
 
         var query = new QueryExpression("systemform")
@@ -88,7 +87,6 @@ public class FormAnalyzer : IFormAnalyzer
 
         var libraryList = libraries.Select(name => new FormLibrary(name, name)).ToList();
 
-        // Only one loop over <event>
         var eventHandlers = new List<FormEventHandler>();
         var formEvents = doc.Descendants("events").Elements("event");
         foreach (var ev in formEvents)

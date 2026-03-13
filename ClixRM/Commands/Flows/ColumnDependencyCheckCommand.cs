@@ -16,9 +16,11 @@ public class ColumnDependencyCheckCommand : SolutionAwareCommand<List<FieldDepen
     public ColumnDependencyCheckCommand(
         IOutputManager outputManager,
         ISolutionPathResolver solutionPathResolver,
+        IActiveConnectionGuard activeConnectionGuard,
         ICommandResultFormatter<List<FieldDependencyResult>> formatter)
         : base("column-dependency",
                "Check all flows in a solution for dependencies on a specific entity field.",
+               activeConnectionGuard,
                formatter)
     {
         _outputManager = outputManager;
@@ -81,8 +83,8 @@ public class ColumnDependencyCheckCommand : SolutionAwareCommand<List<FieldDepen
     }
 
     private async Task HandleCommandAsync(
-        string entityName, string columnName, string? actionFilter, bool actionsOnly, bool triggersOnly, // Command-specific
-        string? onlineSolutionName, string? directoryPath, bool forceDownload) // Shared
+        string entityName, string columnName, string? actionFilter, bool actionsOnly, bool triggersOnly,
+        string? onlineSolutionName, string? directoryPath, bool forceDownload)
     {
         if (actionsOnly && triggersOnly)
         {

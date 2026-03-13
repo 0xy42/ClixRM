@@ -21,9 +21,11 @@ public class FlowTriggersEntityMessageCommand : SolutionAwareCommand<List<FlowTr
     public FlowTriggersEntityMessageCommand(
         IOutputManager outputManager,
         ISolutionPathResolver solutionPathResolver,
+        IActiveConnectionGuard activeConnectionGuard,
         ICommandResultFormatter<List<FlowTriggersEntityMessageResult>> formatter)
         : base("triggers-message",
                "Check all flows in a solution for triggering specific entity messages (e.g. create account).",
+               activeConnectionGuard,
                formatter)
     {
         _outputManager = outputManager;
