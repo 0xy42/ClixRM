@@ -17,9 +17,11 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand<List<Tri
     public FlowTriggeredByEntityMessageCommand(
         IOutputManager outputManager,
         ISolutionPathResolver solutionPathResolver,
+        IActiveConnectionGuard activeConnectionGuard,
         ICommandResultFormatter<List<TriggeredByEntityMessageResult>> formatter)
         : base("triggered-by-message",
                "Check all flows in a solution for triggers on a specific entity and message.",
+               activeConnectionGuard,
                formatter)
     {
         _outputManager = outputManager;
@@ -90,7 +92,6 @@ public class FlowTriggeredByEntityMessageCommand : SolutionAwareCommand<List<Tri
         try
         {
             var results = _analyzer.AnalyzeTriggerUsage(actualSolutionPathToAnalyze, entityName, messageName);
-
             Formatter.Format(results);
         }
         catch (DirectoryNotFoundException ex)

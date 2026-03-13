@@ -4,7 +4,7 @@ using ClixRM.Sdk.Services;
 
 namespace ClixRM.Sdk.Commands;
 
-public class CrmConnectedCommand<TResult> : ClixRMBaseCommand<TResult>
+public abstract class CrmConnectedCommand<TResult> : ClixRMBaseCommand<TResult>
 {
     private readonly IActiveConnectionGuard _activeConnectionGuard;
     protected CrmConnectedCommand(string name, string description,  IActiveConnectionGuard activeConnectionGuard, ICommandResultFormatter<TResult> formatter)

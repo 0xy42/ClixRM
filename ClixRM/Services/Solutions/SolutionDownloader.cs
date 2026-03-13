@@ -10,6 +10,7 @@ using System.ServiceModel;
 using System.Text.Json;
 using ClixRM.Sdk.Models;
 using ClixRM.Sdk.Services;
+using Microsoft.Extensions.Logging;
 
 namespace ClixRM.Services.Solutions;
 
@@ -17,14 +18,16 @@ public class SolutionDownloader : ISolutionDownloader
 {
     private readonly IDataverseConnector _dataverseConnector;
     private readonly string _solutionCacheBaseDirectory;
+    private readonly ILogger<SolutionDownloader> _logger;
 
     private const string MetadataFileName = "clixrm_metadata.json";
     private const string AppRootFolderName = "ClixRM";
     private const string SolutionCacheSubFolderName = "SolutionCache";
 
-    public SolutionDownloader(IDataverseConnector dataverseConnector, IConfiguration configuration)
+    public SolutionDownloader(IDataverseConnector dataverseConnector, IConfiguration configuration, ILogger<SolutionDownloader> logger)
     {
         _dataverseConnector = dataverseConnector;
+        _logger = logger;
 
         var customSolutionCachePath = configuration["SolutionCachePath"];
 
@@ -177,9 +180,9 @@ public class SolutionDownloader : ISolutionDownloader
             {
                 if (Directory.Exists(solutionDir)) Directory.Delete(solutionDir, true);
             }
-            catch
+            catch(Exception iex)
             {
-                /* Ignore cleanup errors */
+                _logger.LogError(iex, "Cleaning up solution download directory failed");
             }
             throw new SolutionDownloadException($"Failed to download and unpack solution '{solutionUniqueName}' (Connection: {activeConnection.EnvironmentName}). See inner exception for details.", ex);
         }
@@ -205,9 +208,9 @@ public class SolutionDownloader : ISolutionDownloader
             if (results.Entities.Count > 0 && results.Entities[0].Contains("version"))
                 return results.Entities[0].GetAttributeValue<string>("version");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            /* Log error */
+            _logger.LogError(ex, "Failed to retrieve solution version from dataverse.");
         }
         return null;
     }
@@ -235,9 +238,9 @@ public class SolutionDownloader : ISolutionDownloader
             Directory.Delete(solutionDir, recursive: true);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            /* Log error */
+            _logger.LogError(ex, "Failed to clear solution cache for solution with unqiue name '{SolutionName}'.", solutionUniqueName);
             return false;
         }
     }
@@ -252,9 +255,9 @@ public class SolutionDownloader : ISolutionDownloader
             Directory.CreateDirectory(_solutionCacheBaseDirectory);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            /* Log error */
+            _logger.LogError(ex, "Failed to clear entire solution cache.");
             return false;
         }
     }
